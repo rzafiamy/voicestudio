@@ -1,0 +1,7 @@
+torch
+soundfile
+rich
+transformers
+accelerate
+qwen-tts
+huggingface_hub[cli]
