@@ -168,6 +168,19 @@ def get_languages():
     """Get supported languages"""
     return jsonify(SUPPORTED_LANGUAGES)
 
+DEFAULT_GEN_KWARGS = dict(
+    max_new_tokens=2048,
+    do_sample=True,
+    top_k=50,
+    top_p=1.0,
+    temperature=0.9,
+    repetition_penalty=1.05,
+    subtalker_dosample=True,
+    subtalker_top_k=50,
+    subtalker_top_p=1.0,
+    subtalker_temperature=0.9,
+)
+
 @app.route('/api/generate', methods=['POST'])
 def generate_audio():
     """Generate audio from text"""
@@ -178,6 +191,14 @@ def generate_audio():
         speaker = data.get('speaker', 'Vivian')
         instruct = data.get('instruct', '')
         
+        # Generation control parameters
+        gen_kwargs = DEFAULT_GEN_KWARGS.copy()
+        user_kwargs = data.get('kwargs', {})
+        # Update with user provided kwargs if any, ensuring type safety could be added here
+        for k, v in user_kwargs.items():
+            if k in gen_kwargs:
+                gen_kwargs[k] = v
+
         if not text:
             return jsonify({"error": "Text is required"}), 400
         
@@ -196,6 +217,7 @@ def generate_audio():
                 text=text,
                 language=language,
                 instruct=instruct,
+                **gen_kwargs
             )
         elif model_type == 'CustomVoice':
             # CustomVoice model uses speaker selection
@@ -204,14 +226,21 @@ def generate_audio():
                 language=language,
                 speaker=speaker,
                 instruct=instruct if instruct else None,
+                **gen_kwargs
             )
         elif model_type == 'Base':
             # Base model - Voice Cloning
             ref_audio_path = data.get('ref_audio_path')
             ref_text = data.get('ref_text')
             
-            if not ref_audio_path or not ref_text:
-                return jsonify({"error": "Base model requires 'ref_audio_path' and 'ref_text' for voice cloning"}), 400
+            # Use 'xvec_only' if user requests it OR if ref_text is missing
+            # This allows cloning even if the user didn't transcribe the audio
+            x_vector_only_mode = data.get('x_vector_only', False)
+            if not ref_text:
+                x_vector_only_mode = True
+            
+            if not ref_audio_path:
+                return jsonify({"error": "Base model requires 'ref_audio_path' for voice cloning"}), 400
                 
             # Check if ref_audio_path is a stored file or needs full path
             if not os.path.isabs(ref_audio_path):
@@ -220,18 +249,20 @@ def generate_audio():
                 if possible_path.exists():
                     ref_audio_path = str(possible_path)
             
-            print(f"Cloning voice from: {ref_audio_path}")
+            print(f"Cloning voice from: {ref_audio_path} (X-Vector Mode: {x_vector_only_mode})")
             
-            # Create prompt
+            # Create prompt - caches features for better performance
             prompt_items = model.create_voice_clone_prompt(
                 ref_audio=ref_audio_path,
-                ref_text=ref_text,
+                ref_text=ref_text if not x_vector_only_mode else None,
+                x_vector_only_mode=x_vector_only_mode
             )
             
             wavs, sr = model.generate_voice_clone(
                 text=text,
                 language=language,
                 voice_clone_prompt=prompt_items,
+                **gen_kwargs
             )
         else:
             return jsonify({"error": f"Unknown model type: {model_type}"}), 500

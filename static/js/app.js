@@ -249,9 +249,10 @@ async function handleGenerate(e) {
             showError('Please select a reference audio file');
             return;
         }
+        // Ref text is optional now (X-Vector mode)
         if (!formData.ref_text) {
-            showError('Please enter the reference text');
-            return;
+            // Implicitly X-Vector mode
+            formData.x_vector_only = true;
         }
     }
 
