@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
+
 <body>
     <div class="container">
         <!-- Header -->
@@ -29,7 +31,7 @@
                     <span class="material-icons">settings_voice</span>
                     Generate Audio
                 </h2>
-                
+
                 <form id="generateForm">
                     <!-- Controls Grid -->
                     <div class="controls-grid">
@@ -62,23 +64,46 @@
                                 <span class="material-icons">memory</span>
                                 Model
                             </label>
-                            <select id="model" name="model" disabled>
+                            <select id="model" name="model">
                                 <option value="">Loading models...</option>
                             </select>
                         </div>
 
                         <!-- Instruction -->
-                        <div class="form-group full-width">
+                        <div class="form-group full-width" id="instructGroup">
                             <label for="instruct">
                                 <span class="material-icons">tune</span>
                                 Style Instruction (Optional)
                             </label>
-                            <input 
-                                type="text" 
-                                id="instruct" 
-                                name="instruct" 
-                                placeholder="e.g., 'Speak in a happy tone' or 'Very angry voice'"
-                            >
+                            <input type="text" id="instruct" name="instruct"
+                                placeholder="e.g., 'Speak in a happy tone' or 'Very angry voice'">
+                        </div>
+
+                        <!-- Reference Audio (for Cloning) -->
+                        <div class="form-group full-width" id="refAudioGroup" style="display: none;">
+                            <label for="refAudio">
+                                <span class="material-icons">upload_file</span>
+                                Reference Audio (3-10s recommended)
+                            </label>
+                            <div class="file-upload-container">
+                                <input type="file" id="refAudioFile" accept="audio/*" style="display: none;">
+                                <button type="button" class="btn-secondary"
+                                    onclick="document.getElementById('refAudioFile').click()">
+                                    Choose File
+                                </button>
+                                <span id="refAudioName">No file selected</span>
+                                <input type="hidden" id="refAudioPath">
+                            </div>
+                        </div>
+
+                        <!-- Reference Text (for Cloning) -->
+                        <div class="form-group full-width" id="refTextGroup" style="display: none;">
+                            <label for="refText">
+                                <span class="material-icons">subtitles</span>
+                                Reference Text (Transcript)
+                            </label>
+                            <input type="text" id="refText" name="refText"
+                                placeholder="Enter the exact text spoken in the reference audio">
                         </div>
                     </div>
 
@@ -88,13 +113,8 @@
                             <span class="material-icons">text_fields</span>
                             Text to Synthesize
                         </label>
-                        <textarea 
-                            id="text" 
-                            name="text" 
-                            rows="6" 
-                            required
-                            placeholder="Enter the text you want to convert to speech..."
-                        ></textarea>
+                        <textarea id="text" name="text" rows="6" required
+                            placeholder="Enter the text you want to convert to speech..."></textarea>
                         <div class="char-count">
                             <span id="charCount">0</span> characters
                         </div>
@@ -135,7 +155,7 @@
                     <span class="material-icons">history</span>
                     Generation History
                 </h2>
-                
+
                 <div id="historyList" class="history-list">
                     <p class="empty-state">No generations yet. Create your first audio!</p>
                 </div>
@@ -150,4 +170,5 @@
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
+
 </html>

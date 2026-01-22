@@ -7,11 +7,13 @@ A beautiful Material Design 3 web interface for testing the Qwen3-TTS audio mode
 - 🎨 **Beautiful MD3 Design**: Modern, minimalist interface with smooth animations
 - 🎤 **Voice Selection**: Choose from 9 premium voices covering multiple languages
 - 🌍 **Multi-Language Support**: 10+ languages including Chinese, English, Japanese, Korean, and more
+- 🔄 **Dynamic Model Switching**: Switch between CustomVoice, VoiceDesign, and Base models on-the-fly without restarting
 - 🎛️ **Parameter Control**: Fine-tune generation with style instructions
 - 📝 **Text-to-Speech**: Convert any text to natural-sounding speech
 - 🔊 **Audio Playback**: Built-in player for immediate listening
 - 📚 **Generation History**: View and replay all generated audio with timestamps
 - 💾 **Persistent Storage**: All generations saved with metadata
+- 🤖 **Auto Model Discovery**: Automatically detects locally downloaded models
 
 ## Installation
 

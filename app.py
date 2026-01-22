@@ -30,13 +30,31 @@ CUSTOM_VOICES = {
     "Sohee": {"description": "Warm Korean female voice with rich emotion", "language": "Korean"}
 }
 
-AVAILABLE_MODELS = [
-    "Qwen3-TTS-12Hz-1.7B-CustomVoice",
-    "Qwen3-TTS-12Hz-0.6B-CustomVoice",
-    "Qwen3-TTS-12Hz-1.7B-VoiceDesign",
-    "Qwen3-TTS-12Hz-1.7B-Base",
-    "Qwen3-TTS-12Hz-0.6B-Base"
-]
+def discover_local_models():
+    """Discover available models in the current directory"""
+    local_models = []
+    current_dir = Path('.')
+    
+    # Look for model directories
+    for item in current_dir.iterdir():
+        if item.is_dir() and 'Qwen3-TTS' in item.name and 'storage' not in item.name:
+            local_models.append(str(item))
+            
+    local_models.sort()
+    
+    # Only if no local models found, provide defaults
+    if not local_models:
+        return [
+            "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+            "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice",
+            "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+            "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+            "Qwen/Qwen3-TTS-12Hz-0.6B-Base"
+        ]
+    
+    return local_models
+
+AVAILABLE_MODELS = discover_local_models()
 
 SUPPORTED_LANGUAGES = [
     "Auto",
@@ -52,28 +70,51 @@ SUPPORTED_LANGUAGES = [
     "Italian"
 ]
 
+import gc
+
 def load_model(model_path):
     """Load the TTS model"""
     global model, model_name, model_type
+    
+    # Unload existing model if present to free VRAM
+    if model is not None:
+        print(f"Unloading previous model: {model_name}")
+        del model
+        model = None
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            
     print(f"Loading model: {model_path}")
-    model = Qwen3TTSModel.from_pretrained(
-        model_path,
-        device_map="cuda:0" if torch.cuda.is_available() else "cpu",
-        dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
-    )
-    model_name = model_path
-    
-    # Detect model type from path
-    if 'CustomVoice' in model_path:
-        model_type = 'CustomVoice'
-    elif 'VoiceDesign' in model_path:
-        model_type = 'VoiceDesign'
-    elif 'Base' in model_path:
-        model_type = 'Base'
-    else:
-        model_type = 'CustomVoice'  # Default
-    
-    print(f"Model loaded successfully: {model_name} (Type: {model_type})")
+    try:
+        model = Qwen3TTSModel.from_pretrained(
+            model_path,
+            device_map="cuda:0" if torch.cuda.is_available() else "cpu",
+            dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
+        )
+        model_name = model_path
+        
+        # Detect model type from path
+        if 'CustomVoice' in model_path:
+            model_type = 'CustomVoice'
+        elif 'VoiceDesign' in model_path:
+            model_type = 'VoiceDesign'
+        elif 'Base' in model_path:
+            model_type = 'Base'
+        else:
+            model_type = 'CustomVoice'  # Default
+        
+        print(f"Model loaded successfully: {model_name} (Type: {model_type})")
+    except Exception as e:
+        print(f"Failed to load model: {str(e)}")
+        # If loading fails, ensure we clean up
+        if model is not None:
+            del model
+            model = None
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        raise e
 
 @app.route('/')
 def index():
@@ -93,6 +134,34 @@ def get_models():
         "current": model_name,
         "type": model_type
     })
+
+@app.route('/api/switch_model', methods=['POST'])
+def switch_model():
+    """Switch to a different model"""
+    try:
+        data = request.json
+        new_model_path = data.get('model')
+        
+        if not new_model_path:
+            return jsonify({"error": "Model path is required"}), 400
+        
+        if new_model_path not in AVAILABLE_MODELS:
+            return jsonify({"error": f"Model {new_model_path} not found in available models"}), 400
+        
+        # Load the new model
+        print(f"Switching to model: {new_model_path}")
+        load_model(new_model_path)
+        
+        return jsonify({
+            "success": True,
+            "model": model_name,
+            "type": model_type,
+            "message": f"Successfully switched to {model_type} model"
+        })
+        
+    except Exception as e:
+        print(f"Error switching model: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/languages', methods=['GET'])
 def get_languages():
@@ -137,8 +206,33 @@ def generate_audio():
                 instruct=instruct if instruct else None,
             )
         elif model_type == 'Base':
-            # Base model - would need voice cloning, not implemented in web UI yet
-            return jsonify({"error": "Base model requires voice cloning which is not yet supported in the web UI. Please use CustomVoice or VoiceDesign models."}), 400
+            # Base model - Voice Cloning
+            ref_audio_path = data.get('ref_audio_path')
+            ref_text = data.get('ref_text')
+            
+            if not ref_audio_path or not ref_text:
+                return jsonify({"error": "Base model requires 'ref_audio_path' and 'ref_text' for voice cloning"}), 400
+                
+            # Check if ref_audio_path is a stored file or needs full path
+            if not os.path.isabs(ref_audio_path):
+                # Check in storage dir if it's a filename
+                possible_path = STORAGE_DIR / ref_audio_path
+                if possible_path.exists():
+                    ref_audio_path = str(possible_path)
+            
+            print(f"Cloning voice from: {ref_audio_path}")
+            
+            # Create prompt
+            prompt_items = model.create_voice_clone_prompt(
+                ref_audio=ref_audio_path,
+                ref_text=ref_text,
+            )
+            
+            wavs, sr = model.generate_voice_clone(
+                text=text,
+                language=language,
+                voice_clone_prompt=prompt_items,
+            )
         else:
             return jsonify({"error": f"Unknown model type: {model_type}"}), 500
         
@@ -208,6 +302,69 @@ def serve_audio(filename):
         
     except Exception as e:
         print(f"Error serving audio: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/promote_audio', methods=['POST'])
+def promote_audio():
+    """Promote a generated audio to be used as reference"""
+    try:
+        data = request.json
+        filename = data.get('filename')
+        
+        if not filename:
+             return jsonify({"error": "Filename is required"}), 400
+             
+        filepath = STORAGE_DIR / filename
+        if not filepath.exists():
+            return jsonify({"error": "File not found"}), 404
+            
+        # Get associated metadata to find text
+        meta_filename = filename.replace('audio_', 'meta_').replace('.wav', '.json')
+        meta_filepath = STORAGE_DIR / meta_filename
+        
+        ref_text = ""
+        if meta_filepath.exists():
+            with open(meta_filepath, 'r') as f:
+                meta = json.load(f)
+                ref_text = meta.get('text', '')
+        
+        return jsonify({
+            "success": True,
+            "ref_audio_path": filename, # Client can use filename, backend resolves it
+            "ref_text": ref_text,
+            "message": "Audio promoted to reference"
+        })
+        
+    except Exception as e:
+        print(f"Error promoting audio: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/upload_audio', methods=['POST'])
+def upload_audio():
+    """Upload an audio file for reference"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({"error": "No file part"}), 400
+            
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"error": "No selected file"}), 400
+            
+        if file:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            # Sanitize filename
+            safe_filename = f"upload_{timestamp}_{file.filename}"
+            save_path = STORAGE_DIR / safe_filename
+            file.save(save_path)
+            
+            return jsonify({
+                "success": True,
+                "filename": safe_filename,
+                "message": "File uploaded successfully"
+            })
+            
+    except Exception as e:
+        print(f"Error uploading file: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 def main():

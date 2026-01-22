@@ -20,10 +20,14 @@ function setupEventListeners() {
     const form = document.getElementById('generateForm');
     const textArea = document.getElementById('text');
     const speakerSelect = document.getElementById('speaker');
+    const modelSelect = document.getElementById('model');
+    const fileInput = document.getElementById('refAudioFile');
 
     form.addEventListener('submit', handleGenerate);
     textArea.addEventListener('input', updateCharCount);
     speakerSelect.addEventListener('change', updateVoiceDescription);
+    modelSelect.addEventListener('change', handleModelSwitch);
+    fileInput.addEventListener('change', handleFileUpload);
 }
 
 // Load voices from API
@@ -110,12 +114,20 @@ async function loadModels() {
 // Update UI based on model type
 function updateUIForModelType() {
     const speakerGroup = document.getElementById('speaker').closest('.form-group');
+    const instructGroup = document.getElementById('instructGroup');
     const instructInput = document.getElementById('instruct');
     const instructLabel = instructInput.previousElementSibling;
 
+    // Base model cloning groups
+    const refAudioGroup = document.getElementById('refAudioGroup');
+    const refTextGroup = document.getElementById('refTextGroup');
+
     if (modelType === 'VoiceDesign') {
-        // Hide speaker selection for VoiceDesign
+        // VoiceDesign Mode
         speakerGroup.style.display = 'none';
+        instructGroup.style.display = 'block';
+        refAudioGroup.style.display = 'none';
+        refTextGroup.style.display = 'none';
 
         // Update instruction placeholder and make it required
         instructInput.placeholder = 'Describe the voice you want (REQUIRED for VoiceDesign model), e.g., "Male, 25 years old, cheerful and energetic"';
@@ -127,8 +139,11 @@ function updateUIForModelType() {
             labelText.textContent = labelText.textContent.replace('(Optional)', '(REQUIRED for VoiceDesign)');
         }
     } else if (modelType === 'CustomVoice') {
-        // Show speaker selection for CustomVoice
+        // CustomVoice Mode
         speakerGroup.style.display = 'flex';
+        instructGroup.style.display = 'block';
+        refAudioGroup.style.display = 'none';
+        refTextGroup.style.display = 'none';
 
         // Update instruction placeholder
         instructInput.placeholder = 'e.g., "Speak in a happy tone" or "Very angry voice"';
@@ -137,6 +152,62 @@ function updateUIForModelType() {
         // Update label
         const labelText = instructLabel.querySelector('span:last-child') || instructLabel;
         labelText.textContent = labelText.textContent.replace('(REQUIRED for VoiceDesign)', '(Optional)');
+    } else if (modelType === 'Base') {
+        // Base Model (Cloning) Mode
+        speakerGroup.style.display = 'none';
+        instructGroup.style.display = 'none'; // Hide style instruction for base model
+        refAudioGroup.style.display = 'flex';
+        refTextGroup.style.display = 'flex';
+
+        instructInput.required = false;
+    }
+}
+
+// Handle model switch
+async function handleModelSwitch(e) {
+    const newModel = e.target.value;
+
+    if (!newModel) return;
+
+    // Show loading state
+    const modelSelect = document.getElementById('model');
+    const originalValue = modelSelect.value;
+    modelSelect.disabled = true;
+    showLoading();
+    hideError();
+
+    try {
+        const response = await fetch(`${API_BASE}/api/switch_model`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ model: newModel })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to switch model');
+        }
+
+        const result = await response.json();
+
+        // Update model type and UI
+        modelType = result.type;
+        updateUIForModelType();
+
+        // Show success message
+        hideLoading();
+        showSuccess(result.message || `Switched to ${result.type} model`);
+
+    } catch (error) {
+        console.error('Error switching model:', error);
+        // Revert to original value
+        modelSelect.value = originalValue;
+        hideLoading();
+        showError(error.message || 'Failed to switch model');
+    } finally {
+        modelSelect.disabled = false;
     }
 }
 
@@ -167,8 +238,22 @@ async function handleGenerate(e) {
         text: document.getElementById('text').value,
         language: document.getElementById('language').value,
         speaker: document.getElementById('speaker').value,
-        instruct: document.getElementById('instruct').value
+        instruct: document.getElementById('instruct').value,
+        ref_audio_path: document.getElementById('refAudioPath').value,
+        ref_text: document.getElementById('refText').value
     };
+
+    // Validate based on model type
+    if (modelType === 'Base') {
+        if (!formData.ref_audio_path) {
+            showError('Please select a reference audio file');
+            return;
+        }
+        if (!formData.ref_text) {
+            showError('Please enter the reference text');
+            return;
+        }
+    }
 
     if (!formData.text.trim()) {
         showError('Please enter some text to generate');
@@ -247,11 +332,36 @@ function showError(message) {
     const errorDiv = document.getElementById('errorMessage');
     errorDiv.textContent = message;
     errorDiv.style.display = 'block';
+
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        hideError();
+    }, 5000);
+}
+
+// Show success message
+function showSuccess(message) {
+    const errorDiv = document.getElementById('errorMessage');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+    errorDiv.style.background = 'var(--md-primary-container)';
+    errorDiv.style.color = 'var(--md-on-primary-container)';
+    errorDiv.style.borderLeftColor = 'var(--md-primary)';
+
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+        hideError();
+    }, 3000);
 }
 
 // Hide error message
 function hideError() {
-    document.getElementById('errorMessage').style.display = 'none';
+    const errorDiv = document.getElementById('errorMessage');
+    errorDiv.style.display = 'none';
+    // Reset to error styling
+    errorDiv.style.background = 'var(--md-error-container)';
+    errorDiv.style.color = 'var(--md-error)';
+    errorDiv.style.borderLeftColor = 'var(--md-error)';
 }
 
 // Load history
@@ -287,10 +397,18 @@ function createHistoryItem(item) {
     const speakerBadge = item.speaker ? `<span class="speaker-badge">${escapeHtml(item.speaker)}</span>` : '';
     const instructText = item.instruct ? `<p><strong>Style:</strong> ${escapeHtml(item.instruct)}</p>` : '';
 
+    // Add "Use as Reference" button
+    const useRefBtn = `
+        <button onclick="promoteToRef('${item.filename}')" class="btn-sm btn-outline" style="margin-left: 10px; padding: 2px 8px; font-size: 0.8rem; cursor: pointer; border-radius: 4px; border: 1px solid var(--md-primary); background: transparent; color: var(--md-primary);">
+            Use for Cloning
+        </button>
+    `;
+
     div.innerHTML = `
         <div class="history-header">
             <div class="history-meta">
                 ${speakerBadge}
+                ${useRefBtn}
                 <div class="timestamp">${formatTimestamp(item.timestamp)}</div>
             </div>
         </div>
@@ -329,3 +447,103 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
+
+// Handle file upload
+async function handleFileUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Show uploading text
+    const nameSpan = document.getElementById('refAudioName');
+    nameSpan.textContent = "Uploading...";
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const response = await fetch(`${API_BASE}/api/upload_audio`, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error('Upload failed');
+        }
+
+        const result = await response.json();
+
+        // Update UI
+        nameSpan.textContent = file.name;
+        document.getElementById('refAudioPath').value = result.filename;
+        showSuccess('File uploaded successfully');
+
+    } catch (error) {
+        console.error('Error uploading file:', error);
+        nameSpan.textContent = "Upload failed";
+        showError('Failed to upload file');
+    }
+}
+
+// Promote generated audio to reference
+async function promoteToRef(filename) {
+    // Check if we are in Base mode, if not switch or warn
+    if (modelType !== 'Base') {
+        const confirmSwitch = confirm('Voice cloning requires the Base model. Do you want to switch to a Base model if available?');
+        if (confirmSwitch) {
+            // Find a base model
+            const modelSelect = document.getElementById('model');
+            let baseModel = null;
+            for (let i = 0; i < modelSelect.options.length; i++) {
+                if (modelSelect.options[i].value.includes('Base')) {
+                    baseModel = modelSelect.options[i].value;
+                    break;
+                }
+            }
+
+            if (baseModel) {
+                modelSelect.value = baseModel;
+                // Trigger change event manually
+                const event = new Event('change');
+                modelSelect.dispatchEvent(event);
+            } else {
+                showError('No Base model available to switch to.');
+                return;
+            }
+        } else {
+            return;
+        }
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/api/promote_audio`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ filename: filename })
+        });
+
+        if (!response.ok) {
+            throw new Error('Promotion failed');
+        }
+
+        const result = await response.json();
+
+        // Update UI
+        document.getElementById('refAudioPath').value = result.ref_audio_path;
+        document.getElementById('refText').value = result.ref_text;
+        document.getElementById('refAudioName').textContent = result.ref_audio_path; // Or show "Promoted from history"
+
+        showSuccess('Audio set as cloning reference');
+
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    } catch (error) {
+        console.error('Error promoting audio:', error);
+        showError('Failed to set audio as reference');
+    }
+}
+
+// Expose promoteToRef to global scope
+window.promoteToRef = promoteToRef;
