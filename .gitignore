@@ -1,2 +1,9 @@
-Qwen3-TTS*/
+*.pyc
+__pycache__/
 *.wav
+storage/
+.venv/
+venv/
+*.log
+.DS_Store
+Qwen3-TTS-*/

@@ -5,3 +5,4 @@ transformers
 accelerate
 qwen-tts
 huggingface_hub[cli]
+flask

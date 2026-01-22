@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qwen3-TTS Audio Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <span class="material-icons">graphic_eq</span>
+                    <h1>Qwen3-TTS</h1>
+                </div>
+                <p class="subtitle">AI-Powered Text-to-Speech Generator</p>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Generator Section -->
+            <section class="generator-section card">
+                <h2 class="section-title">
+                    <span class="material-icons">settings_voice</span>
+                    Generate Audio
+                </h2>
+                
+                <form id="generateForm">
+                    <!-- Controls Grid -->
+                    <div class="controls-grid">
+                        <!-- Voice Selection -->
+                        <div class="form-group">
+                            <label for="speaker">
+                                <span class="material-icons">person</span>
+                                Voice
+                            </label>
+                            <select id="speaker" name="speaker" required>
+                                <option value="">Loading voices...</option>
+                            </select>
+                            <p class="voice-description" id="voiceDescription"></p>
+                        </div>
+
+                        <!-- Language Selection -->
+                        <div class="form-group">
+                            <label for="language">
+                                <span class="material-icons">language</span>
+                                Language
+                            </label>
+                            <select id="language" name="language" required>
+                                <option value="">Loading languages...</option>
+                            </select>
+                        </div>
+
+                        <!-- Model Selection -->
+                        <div class="form-group">
+                            <label for="model">
+                                <span class="material-icons">memory</span>
+                                Model
+                            </label>
+                            <select id="model" name="model" disabled>
+                                <option value="">Loading models...</option>
+                            </select>
+                        </div>
+
+                        <!-- Instruction -->
+                        <div class="form-group full-width">
+                            <label for="instruct">
+                                <span class="material-icons">tune</span>
+                                Style Instruction (Optional)
+                            </label>
+                            <input 
+                                type="text" 
+                                id="instruct" 
+                                name="instruct" 
+                                placeholder="e.g., 'Speak in a happy tone' or 'Very angry voice'"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Text Input -->
+                    <div class="form-group">
+                        <label for="text">
+                            <span class="material-icons">text_fields</span>
+                            Text to Synthesize
+                        </label>
+                        <textarea 
+                            id="text" 
+                            name="text" 
+                            rows="6" 
+                            required
+                            placeholder="Enter the text you want to convert to speech..."
+                        ></textarea>
+                        <div class="char-count">
+                            <span id="charCount">0</span> characters
+                        </div>
+                    </div>
+
+                    <!-- Generate Button -->
+                    <button type="submit" class="btn-generate" id="generateBtn">
+                        <span class="material-icons">play_circle</span>
+                        Generate Audio
+                    </button>
+                </form>
+
+                <!-- Audio Player -->
+                <div id="audioPlayer" class="audio-player" style="display: none;">
+                    <div class="player-header">
+                        <span class="material-icons">volume_up</span>
+                        <h3>Generated Audio</h3>
+                    </div>
+                    <audio id="audioElement" controls></audio>
+                    <div class="player-info">
+                        <p id="playerTimestamp"></p>
+                    </div>
+                </div>
+
+                <!-- Loading State -->
+                <div id="loadingState" class="loading-state" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Generating audio, please wait...</p>
+                </div>
+
+                <!-- Error Message -->
+                <div id="errorMessage" class="error-message" style="display: none;"></div>
+            </section>
+
+            <!-- History Section -->
+            <section class="history-section card">
+                <h2 class="section-title">
+                    <span class="material-icons">history</span>
+                    Generation History
+                </h2>
+                
+                <div id="historyList" class="history-list">
+                    <p class="empty-state">No generations yet. Create your first audio!</p>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Powered by Qwen3-TTS | Material Design 3</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
