@@ -4,6 +4,7 @@ const API_BASE = '';
 // Global state
 let voices = {};
 let currentAudio = null;
+let modelType = 'CustomVoice';  // Track current model type
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
@@ -19,7 +20,7 @@ function setupEventListeners() {
     const form = document.getElementById('generateForm');
     const textArea = document.getElementById('text');
     const speakerSelect = document.getElementById('speaker');
-    
+
     form.addEventListener('submit', handleGenerate);
     textArea.addEventListener('input', updateCharCount);
     speakerSelect.addEventListener('change', updateVoiceDescription);
@@ -30,17 +31,17 @@ async function loadVoices() {
     try {
         const response = await fetch(`${API_BASE}/api/voices`);
         voices = await response.json();
-        
+
         const speakerSelect = document.getElementById('speaker');
         speakerSelect.innerHTML = '';
-        
+
         Object.keys(voices).forEach(speaker => {
             const option = document.createElement('option');
             option.value = speaker;
             option.textContent = speaker;
             speakerSelect.appendChild(option);
         });
-        
+
         // Set first voice as default and update description
         if (Object.keys(voices).length > 0) {
             speakerSelect.value = Object.keys(voices)[0];
@@ -57,17 +58,17 @@ async function loadLanguages() {
     try {
         const response = await fetch(`${API_BASE}/api/languages`);
         const languages = await response.json();
-        
+
         const languageSelect = document.getElementById('language');
         languageSelect.innerHTML = '';
-        
+
         languages.forEach(lang => {
             const option = document.createElement('option');
             option.value = lang;
             option.textContent = lang;
             languageSelect.appendChild(option);
         });
-        
+
         // Set Auto as default
         languageSelect.value = 'Auto';
     } catch (error) {
@@ -81,10 +82,10 @@ async function loadModels() {
     try {
         const response = await fetch(`${API_BASE}/api/models`);
         const data = await response.json();
-        
+
         const modelSelect = document.getElementById('model');
         modelSelect.innerHTML = '';
-        
+
         data.models.forEach(model => {
             const option = document.createElement('option');
             option.value = model;
@@ -94,9 +95,48 @@ async function loadModels() {
             }
             modelSelect.appendChild(option);
         });
+
+        // Update model type and UI
+        if (data.type) {
+            modelType = data.type;
+            updateUIForModelType();
+        }
     } catch (error) {
         console.error('Error loading models:', error);
         showError('Failed to load models');
+    }
+}
+
+// Update UI based on model type
+function updateUIForModelType() {
+    const speakerGroup = document.getElementById('speaker').closest('.form-group');
+    const instructInput = document.getElementById('instruct');
+    const instructLabel = instructInput.previousElementSibling;
+
+    if (modelType === 'VoiceDesign') {
+        // Hide speaker selection for VoiceDesign
+        speakerGroup.style.display = 'none';
+
+        // Update instruction placeholder and make it required
+        instructInput.placeholder = 'Describe the voice you want (REQUIRED for VoiceDesign model), e.g., "Male, 25 years old, cheerful and energetic"';
+        instructInput.required = true;
+
+        // Update label to show it's required
+        const labelText = instructLabel.querySelector('span:last-child') || instructLabel;
+        if (!labelText.textContent.includes('REQUIRED')) {
+            labelText.textContent = labelText.textContent.replace('(Optional)', '(REQUIRED for VoiceDesign)');
+        }
+    } else if (modelType === 'CustomVoice') {
+        // Show speaker selection for CustomVoice
+        speakerGroup.style.display = 'flex';
+
+        // Update instruction placeholder
+        instructInput.placeholder = 'e.g., "Speak in a happy tone" or "Very angry voice"';
+        instructInput.required = false;
+
+        // Update label
+        const labelText = instructLabel.querySelector('span:last-child') || instructLabel;
+        labelText.textContent = labelText.textContent.replace('(REQUIRED for VoiceDesign)', '(Optional)');
     }
 }
 
@@ -104,7 +144,7 @@ async function loadModels() {
 function updateVoiceDescription() {
     const speaker = document.getElementById('speaker').value;
     const descElement = document.getElementById('voiceDescription');
-    
+
     if (voices[speaker]) {
         const voice = voices[speaker];
         descElement.textContent = `${voice.description} (Native: ${voice.language})`;
@@ -122,24 +162,24 @@ function updateCharCount() {
 // Handle form submission
 async function handleGenerate(e) {
     e.preventDefault();
-    
+
     const formData = {
         text: document.getElementById('text').value,
         language: document.getElementById('language').value,
         speaker: document.getElementById('speaker').value,
         instruct: document.getElementById('instruct').value
     };
-    
+
     if (!formData.text.trim()) {
         showError('Please enter some text to generate');
         return;
     }
-    
+
     // Show loading state
     showLoading();
     hideError();
     hideAudioPlayer();
-    
+
     try {
         const response = await fetch(`${API_BASE}/api/generate`, {
             method: 'POST',
@@ -148,21 +188,21 @@ async function handleGenerate(e) {
             },
             body: JSON.stringify(formData)
         });
-        
+
         if (!response.ok) {
             const error = await response.json();
             throw new Error(error.error || 'Generation failed');
         }
-        
+
         const result = await response.json();
-        
+
         // Hide loading and show audio player
         hideLoading();
         showAudioPlayer(result);
-        
+
         // Reload history
         loadHistory();
-        
+
     } catch (error) {
         console.error('Error generating audio:', error);
         hideLoading();
@@ -187,12 +227,12 @@ function showAudioPlayer(result) {
     const player = document.getElementById('audioPlayer');
     const audio = document.getElementById('audioElement');
     const timestamp = document.getElementById('playerTimestamp');
-    
+
     audio.src = `${API_BASE}/api/audio/${result.filename}`;
     timestamp.textContent = `Generated: ${formatTimestamp(result.timestamp)}`;
-    
+
     player.style.display = 'block';
-    
+
     // Auto play
     audio.play().catch(err => console.log('Auto-play prevented:', err));
 }
@@ -219,21 +259,21 @@ async function loadHistory() {
     try {
         const response = await fetch(`${API_BASE}/api/history`);
         const history = await response.json();
-        
+
         const historyList = document.getElementById('historyList');
-        
+
         if (history.length === 0) {
             historyList.innerHTML = '<p class="empty-state">No generations yet. Create your first audio!</p>';
             return;
         }
-        
+
         historyList.innerHTML = '';
-        
+
         history.forEach(item => {
             const historyItem = createHistoryItem(item);
             historyList.appendChild(historyItem);
         });
-        
+
     } catch (error) {
         console.error('Error loading history:', error);
     }
@@ -243,13 +283,14 @@ async function loadHistory() {
 function createHistoryItem(item) {
     const div = document.createElement('div');
     div.className = 'history-item';
-    
+
+    const speakerBadge = item.speaker ? `<span class="speaker-badge">${escapeHtml(item.speaker)}</span>` : '';
     const instructText = item.instruct ? `<p><strong>Style:</strong> ${escapeHtml(item.instruct)}</p>` : '';
-    
+
     div.innerHTML = `
         <div class="history-header">
             <div class="history-meta">
-                <span class="speaker-badge">${escapeHtml(item.speaker)}</span>
+                ${speakerBadge}
                 <div class="timestamp">${formatTimestamp(item.timestamp)}</div>
             </div>
         </div>
@@ -265,7 +306,7 @@ function createHistoryItem(item) {
             </audio>
         </div>
     `;
-    
+
     return div;
 }
 
@@ -278,7 +319,7 @@ function formatTimestamp(timestamp) {
     const hour = timestamp.substring(9, 11);
     const minute = timestamp.substring(11, 13);
     const second = timestamp.substring(13, 15);
-    
+
     return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
 }
 
