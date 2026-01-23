@@ -317,6 +317,13 @@ function showAudioPlayer(result) {
     audio.src = `${API_BASE}/api/audio/${result.filename}`;
     timestamp.textContent = `Generated: ${formatTimestamp(result.timestamp)}`;
 
+    const metrics = document.getElementById('playerMetrics');
+    if (result.elapsed_time && result.chars_per_sec) {
+        metrics.textContent = `Inference: ${result.elapsed_time.toFixed(2)}s | Speed: ${result.chars_per_sec.toFixed(2)} chars/sec`;
+    } else {
+        metrics.textContent = '';
+    }
+
     player.style.display = 'block';
 
     // Auto play
@@ -418,6 +425,10 @@ function createHistoryItem(item) {
             <strong>Language:</strong> ${escapeHtml(item.language)}
         </p>
         ${instructText}
+        <div class="history-metrics" style="font-size: 0.85rem; color: var(--md-on-surface-variant); margin-bottom: 0.5rem;">
+            ${item.elapsed_time ? `<strong>Inference:</strong> ${item.elapsed_time.toFixed(2)}s | ` : ''}
+            ${item.chars_per_sec ? `<strong>Speed:</strong> ${item.chars_per_sec.toFixed(2)} chars/sec` : ''}
+        </div>
         <div class="history-audio">
             <audio controls>
                 <source src="${API_BASE}/api/audio/${item.filename}" type="audio/wav">

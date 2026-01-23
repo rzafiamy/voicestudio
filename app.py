@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import time
 from datetime import datetime
 from pathlib import Path
 import torch
@@ -222,6 +223,8 @@ def generate_audio():
         # Generate audio based on model type
         print(f"Generating audio for text: {text[:50]}... (Model type: {model_type})")
         
+        start_time = time.time()
+        
         if model_type == 'VoiceDesign':
             # VoiceDesign model uses instruct for voice description
             if not instruct:
@@ -281,6 +284,10 @@ def generate_audio():
         else:
             return jsonify({"error": f"Unknown model type: {model_type}"}), 500
         
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        chars_per_sec = len(text) / elapsed_time if elapsed_time > 0 else 0
+        
         # Save audio with timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         filename = f"audio_{timestamp}.wav"
@@ -297,7 +304,9 @@ def generate_audio():
             "timestamp": timestamp,
             "filename": filename,
             "model": model_name,
-            "model_type": model_type
+            "model_type": model_type,
+            "elapsed_time": elapsed_time,
+            "chars_per_sec": chars_per_sec
         }
         
         metadata_file = STORAGE_DIR / f"meta_{timestamp}.json"
@@ -310,6 +319,8 @@ def generate_audio():
             "success": True,
             "filename": filename,
             "timestamp": timestamp,
+            "elapsed_time": elapsed_time,
+            "chars_per_sec": chars_per_sec,
             "metadata": metadata
         })
         
