@@ -87,11 +87,25 @@ def load_model(model_path):
             
     print(f"Loading model: {model_path}")
     try:
+        # Load with Flash Attention 2 if available
+        model_kwargs = {
+            "device_map": "cuda:0" if torch.cuda.is_available() else "cpu",
+            "dtype": torch.bfloat16 if torch.cuda.is_available() else torch.float32,
+        }
+        
+        # Try to use Flash Attention 2
+        try:
+            import flash_attn
+            model_kwargs["attn_implementation"] = "flash_attention_2"
+            print("⚡ Flash Attention 2 enabled")
+        except ImportError:
+            print("⚠️ Flash Attention 2 not found, using default attention")
+
         model = Qwen3TTSModel.from_pretrained(
             model_path,
-            device_map="cuda:0" if torch.cuda.is_available() else "cpu",
-            dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
+            **model_kwargs
         )
+        
         model_name = model_path
         
         # Detect model type from path
