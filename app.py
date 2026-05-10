@@ -92,6 +92,7 @@ def load_model(model_path):
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
             
+    model_path = model_path.rstrip('/')
     print(f"Loading model: {model_path}")
     try:
         # Disable gradient computation globally for inference

@@ -4,171 +4,153 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Qwen3-TTS Audio Generator</title>
+    <title>Makix Studio | Professional AI Voice Platform</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 
 <body>
-    <div class="container">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-content">
-                <div class="logo">
-                    <span class="material-icons">graphic_eq</span>
-                    <h1>Qwen3-TTS</h1>
-                </div>
-                <p class="subtitle">AI-Powered Text-to-Speech Generator</p>
+    <!-- Sidebar: Library & Navigation -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-icon">
+                <span class="material-icons">graphic_eq</span>
+            </div>
+            <h1 class="logo-text">Makix Studio</h1>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-section-title">Generation History</div>
+            <div id="historyList" class="history-list">
+                <!-- History items injected here -->
+                <p class="empty-state" style="padding: 1rem; color: var(--text-dim); font-size: 0.85rem;">No generations yet</p>
+            </div>
+        </nav>
+
+        <div style="padding: 1.5rem; border-top: 1px solid var(--border-main);">
+             <p style="font-size: 0.75rem; color: var(--text-dim);">v3.0.0 Pro Studio</p>
+        </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="main-wrapper">
+        <header class="top-bar">
+            <div class="model-badge">
+                <div class="status-dot"></div>
+                <span id="currentModelDisplay">Loading Model...</span>
+            </div>
+            
+            <div class="top-actions">
+                <select id="model" name="model" class="model-selector-top" style="background: transparent; border: 1px solid var(--border-main); color: var(--text-main); padding: 0.4rem 1rem; border-radius: 8px; font-size: 0.85rem;">
+                    <option value="">Select Model</option>
+                </select>
             </div>
         </header>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Generator Section -->
-            <section class="generator-section card">
-                <h2 class="section-title">
-                    <span class="material-icons">settings_voice</span>
-                    Generate Audio
-                </h2>
-
-                <form id="generateForm">
-                    <!-- Controls Grid -->
-                    <div class="controls-grid">
-                        <!-- Voice Selection -->
-                        <div class="form-group">
-                            <label for="speaker">
-                                <span class="material-icons">person</span>
-                                Voice
-                            </label>
-                            <select id="speaker" name="speaker" required>
-                                <option value="">Loading voices...</option>
-                            </select>
-                            <p class="voice-description" id="voiceDescription"></p>
-                        </div>
-
-                        <!-- Language Selection -->
-                        <div class="form-group">
-                            <label for="language">
-                                <span class="material-icons">language</span>
-                                Language
-                            </label>
-                            <select id="language" name="language" required>
-                                <option value="">Loading languages...</option>
-                            </select>
-                        </div>
-
-                        <!-- Model Selection -->
-                        <div class="form-group">
-                            <label for="model">
-                                <span class="material-icons">memory</span>
-                                Model
-                            </label>
-                            <select id="model" name="model">
-                                <option value="">Loading models...</option>
-                            </select>
-                        </div>
-
-                        <!-- Instruction -->
-                        <div class="form-group full-width" id="instructGroup">
-                            <label for="instruct">
-                                <span class="material-icons">tune</span>
-                                Style Instruction (Optional)
-                            </label>
-                            <input type="text" id="instruct" name="instruct"
-                                placeholder="e.g., 'Speak in a happy tone' or 'Very angry voice'">
-                        </div>
-
-                        <!-- Reference Audio (for Cloning) -->
-                        <div class="form-group full-width" id="refAudioGroup" style="display: none;">
-                            <label for="refAudio">
-                                <span class="material-icons">upload_file</span>
-                                Reference Audio (3-10s recommended)
-                            </label>
-                            <div class="file-upload-container">
-                                <input type="file" id="refAudioFile" accept="audio/*" style="display: none;">
-                                <button type="button" class="btn-secondary"
-                                    onclick="document.getElementById('refAudioFile').click()">
-                                    Choose File
-                                </button>
-                                <span id="refAudioName">No file selected</span>
-                                <input type="hidden" id="refAudioPath">
-                            </div>
-                        </div>
-
-                        <!-- Reference Text (for Cloning) -->
-                        <div class="form-group full-width" id="refTextGroup" style="display: none;">
-                            <label for="refText">
-                                <span class="material-icons">subtitles</span>
-                                Reference Text (Transcript)
-                            </label>
-                            <input type="text" id="refText" name="refText"
-                                placeholder="Enter the exact text spoken in the reference audio">
-                        </div>
+        <section class="workbench">
+            <form id="generateForm">
+                <div class="editor-card">
+                    <!-- Loading Overlay inside card -->
+                    <div id="loadingState" class="loading-overlay">
+                        <div class="spinner-ring"></div>
+                        <p style="margin-top: 1.5rem; font-weight: 500; letter-spacing: 0.05em;">SYNTHESIZING AUDIO...</p>
                     </div>
 
-                    <!-- Text Input -->
-                    <div class="form-group">
-                        <label for="text">
-                            <span class="material-icons">text_fields</span>
-                            Text to Synthesize
-                        </label>
-                        <textarea id="text" name="text" rows="6" required
-                            placeholder="Enter the text you want to convert to speech..."></textarea>
-                        <div class="char-count">
+                    <div class="text-area-container">
+                        <textarea id="text" name="text" placeholder="Start typing your script here..." required></textarea>
+                        <div class="char-counter">
                             <span id="charCount">0</span> characters
                         </div>
                     </div>
 
-                    <!-- Generate Button -->
-                    <button type="submit" class="btn-generate" id="generateBtn">
-                        <span class="material-icons">play_circle</span>
-                        Generate Audio
+                    <div class="controls-panel">
+                        <!-- Voice -->
+                        <div class="control-group" id="speakerGroup">
+                            <label for="speaker">
+                                <span class="material-icons" style="font-size: 1rem;">person</span>
+                                Speaker
+                            </label>
+                            <select id="speaker" name="speaker" required>
+                                <option value="">Loading voices...</option>
+                            </select>
+                            <p class="voice-description" id="voiceDescription" style="font-size: 0.75rem; color: var(--text-dim);"></p>
+                        </div>
+
+                        <!-- Language -->
+                        <div class="control-group">
+                            <label for="language">
+                                <span class="material-icons" style="font-size: 1rem;">language</span>
+                                Language
+                            </label>
+                            <select id="language" name="language" required>
+                                <option value="">Loading...</option>
+                            </select>
+                        </div>
+
+                        <!-- Style / Instruction -->
+                        <div class="control-group" id="instructGroup">
+                            <label for="instruct">
+                                <span class="material-icons" style="font-size: 1rem;">tune</span>
+                                Style Instruction
+                            </label>
+                            <input type="text" id="instruct" name="instruct" placeholder="e.g. 'Energetic' or 'Whisper'">
+                        </div>
+
+                        <!-- Cloning Controls (Hidden by default) -->
+                        <div class="control-group full-width" id="refAudioGroup" style="display: none;">
+                            <label>
+                                <span class="material-icons" style="font-size: 1rem;">settings_voice</span>
+                                Reference Voice
+                            </label>
+                            <div class="file-dropzone" onclick="document.getElementById('refAudioFile').click()">
+                                <span class="material-icons" style="font-size: 2rem; color: var(--accent-primary); margin-bottom: 0.5rem;">upload</span>
+                                <p id="refAudioName">Click to upload or drag reference audio (wav/mp3)</p>
+                                <input type="file" id="refAudioFile" accept="audio/*" style="display: none;">
+                                <input type="hidden" id="refAudioPath">
+                            </div>
+                        </div>
+
+                        <div class="control-group full-width" id="refTextGroup" style="display: none;">
+                            <label for="refText">
+                                <span class="material-icons" style="font-size: 1rem;">description</span>
+                                Reference Transcription (Optional)
+                            </label>
+                            <input type="text" id="refText" name="refText" placeholder="Enter what is being said in the reference audio for better results">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="action-area">
+                    <button type="submit" class="btn-produce" id="generateBtn">
+                        <span class="material-icons">play_arrow</span>
+                        PRODUCE AUDIO
                     </button>
-                </form>
-
-                <!-- Audio Player -->
-                <div id="audioPlayer" class="audio-player" style="display: none;">
-                    <div class="player-header">
-                        <span class="material-icons">volume_up</span>
-                        <h3>Generated Audio</h3>
-                    </div>
-                    <audio id="audioElement" controls></audio>
-                    <div class="player-info">
-                        <p id="playerTimestamp"></p>
-                        <p id="playerMetrics"
-                            style="font-size: 0.85rem; color: var(--md-on-surface-variant); margin-top: 4px;"></p>
-                    </div>
                 </div>
+            </form>
 
-                <!-- Loading State -->
-                <div id="loadingState" class="loading-state" style="display: none;">
-                    <div class="spinner"></div>
-                    <p>Generating audio, please wait...</p>
-                </div>
+            <!-- Error message container -->
+            <div id="errorMessage" class="toast-container"></div>
+        </section>
 
-                <!-- Error Message -->
-                <div id="errorMessage" class="error-message" style="display: none;"></div>
-            </section>
-
-            <!-- History Section -->
-            <section class="history-section card">
-                <h2 class="section-title">
-                    <span class="material-icons">history</span>
-                    Generation History
-                </h2>
-
-                <div id="historyList" class="history-list">
-                    <p class="empty-state">No generations yet. Create your first audio!</p>
-                </div>
-            </section>
-        </main>
-
-        <!-- Footer -->
-        <footer class="footer">
-            <p>Powered by Qwen3-TTS | Material Design 3</p>
-        </footer>
-    </div>
+        <!-- Floating Player (Visible after generation) -->
+        <div id="audioPlayer" class="floating-player">
+            <div class="logo-icon" style="width: 50px; height: 50px;">
+                <span class="material-icons">volume_up</span>
+            </div>
+            <div class="player-meta">
+                <div class="player-title">Latest Production</div>
+                <div class="player-subtitle" id="playerMetrics">Metrics loading...</div>
+                <div id="playerTimestamp" style="font-size: 0.7rem; color: var(--text-dim); margin-top: 2px;"></div>
+            </div>
+            <div class="player-controls">
+                <audio id="audioElement" controls></audio>
+            </div>
+            <button onclick="document.getElementById('audioPlayer').classList.remove('visible')" class="btn-close" style="background: transparent; border: none; color: var(--text-dim); cursor: pointer;">
+                <span class="material-icons">close</span>
+            </button>
+        </div>
+    </main>
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
