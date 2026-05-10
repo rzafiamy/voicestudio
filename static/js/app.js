@@ -67,6 +67,11 @@ async function updateVRAMStatus() {
     }
 }
 
+function countWords(text) {
+    if (!text) return 0;
+    return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+}
+
 // Helper for friendly model names
 function getFriendlyModelInfo(technicalName) {
     let name = technicalName.split('/').pop(); // Default
@@ -476,6 +481,8 @@ function updateVoiceDescription() {
 function updateCharCount() {
     const text = document.getElementById('text').value;
     document.getElementById('charCount').textContent = text.length;
+    const wordCountEl = document.getElementById('wordCount');
+    if (wordCountEl) wordCountEl.textContent = countWords(text);
 }
 
 // Handle form submission
@@ -612,6 +619,7 @@ async function switchToViewMode(item) {
     
     document.getElementById('viewTimestamp').textContent = formatTimestamp(item.timestamp);
     document.getElementById('viewDuration').textContent = item.elapsed_time ? `${item.elapsed_time.toFixed(2)}s` : 'N/A';
+    document.getElementById('viewWordCount').textContent = countWords(item.text);
     document.getElementById('viewEfficiency').textContent = item.chars_per_sec ? `${item.chars_per_sec.toFixed(1)} ch/s` : 'N/A';
     
     const modelInfo = getFriendlyModelInfo(item.model || '');
