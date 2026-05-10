@@ -59,7 +59,19 @@
             </div>
 
             <div class="top-actions">
-                <select id="model" name="model" class="model-selector-top">
+                <div class="custom-select-container" id="modelSelectContainer">
+                    <div class="custom-select-trigger" id="modelTrigger">
+                        <div class="trigger-content">
+                            <i data-lucide="cpu" class="trigger-icon"></i>
+                            <span id="modelValue">Select Model</span>
+                        </div>
+                        <i data-lucide="chevron-down" style="width: 14px; height: 14px; color: var(--text-dim);"></i>
+                    </div>
+                    <div class="custom-select-options" id="modelOptions">
+                        <!-- Model options injected here -->
+                    </div>
+                </div>
+                <select id="model" name="model" class="hidden-select">
                     <option value="">Select Model</option>
                 </select>
             </div>
@@ -88,13 +100,26 @@
                     </div>
 
                     <div class="controls-panel">
-                        <!-- Voice -->
                         <div class="control-group" id="speakerGroup">
                             <label for="speaker">
                                 <i data-lucide="user" style="width: 14px; height: 14px;"></i>
                                 Speaker
                             </label>
-                            <select id="speaker" name="speaker" required>
+                            
+                            <div class="custom-select-container" id="speakerSelectContainer">
+                                <div class="custom-select-trigger" id="speakerTrigger">
+                                    <div class="trigger-content">
+                                        <i data-lucide="mic-2" class="trigger-icon"></i>
+                                        <span id="speakerValue">Loading voices...</span>
+                                    </div>
+                                    <i data-lucide="chevron-down" style="width: 14px; height: 14px; color: var(--text-dim);"></i>
+                                </div>
+                                <div class="custom-select-options" id="speakerOptions">
+                                    <!-- Voice options injected here -->
+                                </div>
+                            </div>
+
+                            <select id="speaker" name="speaker" class="hidden-select" required>
                                 <option value="">Loading voices...</option>
                             </select>
                             <p class="voice-description" id="voiceDescription" style="font-size: 0.75rem; color: var(--text-dim);"></p>

@@ -42,6 +42,30 @@ function setupEventListeners() {
         });
     });
 
+    // Custom Select Event Listeners
+    const speakerTrigger = document.getElementById('speakerTrigger');
+    const modelTrigger = document.getElementById('modelTrigger');
+
+    if (speakerTrigger) {
+        speakerTrigger.onclick = (e) => {
+            e.stopPropagation();
+            toggleDropdown('speakerOptions');
+        };
+    }
+
+    if (modelTrigger) {
+        modelTrigger.onclick = (e) => {
+            e.stopPropagation();
+            toggleDropdown('modelOptions');
+        };
+    }
+
+    // Close dropdowns on click outside
+    window.onclick = () => {
+        toggleDropdown('speakerOptions', false);
+        toggleDropdown('modelOptions', false);
+    };
+
     // Modal close listeners
     document.getElementById('modalCancel').onclick = () => hideModal('confirmModal');
     document.getElementById('modalConfirm').onclick = () => {
@@ -51,6 +75,24 @@ function setupEventListeners() {
     };
 }
 
+function toggleDropdown(id, force) {
+    const options = document.getElementById(id);
+    const trigger = document.getElementById(id.replace('Options', 'Trigger'));
+    
+    if (!options) return;
+
+    const isShowing = force !== undefined ? force : !options.classList.contains('show');
+    
+    // Close all first
+    document.querySelectorAll('.custom-select-options').forEach(opt => opt.classList.remove('show'));
+    document.querySelectorAll('.custom-select-trigger').forEach(trig => trig.classList.remove('active'));
+
+    if (isShowing) {
+        options.classList.add('show');
+        if (trigger) trigger.classList.add('active');
+    }
+}
+
 // Load voices from API
 async function loadVoices() {
     try {
@@ -58,26 +100,75 @@ async function loadVoices() {
         voices = await response.json();
 
         const speakerSelect = document.getElementById('speaker');
-        if (!speakerSelect) return;
+        const speakerOptions = document.getElementById('speakerOptions');
+        const speakerValue = document.getElementById('speakerValue');
+        
+        if (!speakerSelect || !speakerOptions) return;
         
         speakerSelect.innerHTML = '';
+        speakerOptions.innerHTML = '';
 
-        Object.keys(voices).forEach(speaker => {
+        const voiceKeys = Object.keys(voices);
+
+        voiceKeys.forEach(speaker => {
+            // Update hidden select
             const option = document.createElement('option');
             option.value = speaker;
             option.textContent = speaker;
             speakerSelect.appendChild(option);
+
+            // Create beautiful option
+            const voice = voices[speaker];
+            const opt = document.createElement('div');
+            opt.className = 'custom-select-option';
+            opt.dataset.value = speaker;
+            
+            opt.innerHTML = `
+                <div class="option-icon">
+                    <i data-lucide="mic-2"></i>
+                </div>
+                <div class="option-info">
+                    <div class="option-label">${speaker}</div>
+                    <div class="option-sublabel">${voice.language || 'Multi'}</div>
+                </div>
+            `;
+
+            opt.onclick = (e) => {
+                e.stopPropagation();
+                selectVoice(speaker);
+                toggleDropdown('speakerOptions', false);
+            };
+
+            speakerOptions.appendChild(opt);
         });
 
-        // Set first voice as default and update description
-        if (Object.keys(voices).length > 0) {
-            speakerSelect.value = Object.keys(voices)[0];
-            updateVoiceDescription();
+        // Set first voice as default
+        if (voiceKeys.length > 0) {
+            selectVoice(voiceKeys[0]);
         }
+
+        // Initialize Lucide icons
+        if (window.lucide) lucide.createIcons();
     } catch (error) {
         console.error('Error loading voices:', error);
         showError('Failed to load voices');
     }
+}
+
+function selectVoice(speaker) {
+    const speakerSelect = document.getElementById('speaker');
+    const speakerValue = document.getElementById('speakerValue');
+    const speakerOptions = document.getElementById('speakerOptions');
+    
+    speakerSelect.value = speaker;
+    if (speakerValue) speakerValue.textContent = speaker;
+    
+    // Update active state in options
+    document.querySelectorAll('#speakerOptions .custom-select-option').forEach(opt => {
+        opt.classList.toggle('selected', opt.dataset.value === speaker);
+    });
+    
+    updateVoiceDescription();
 }
 
 // Load languages from API
@@ -113,21 +204,54 @@ async function loadModels() {
         const data = await response.json();
 
         const modelSelect = document.getElementById('model');
-        const display = document.getElementById('currentModelDisplay');
+        const modelOptions = document.getElementById('modelOptions');
+        const modelValue = document.getElementById('modelValue');
         
+        if (!modelSelect || !modelOptions) return;
+
         modelSelect.innerHTML = '';
+        modelOptions.innerHTML = '';
 
         data.models.forEach(model => {
+            const shortName = model.split('/').pop();
+            
+            // Update hidden select
             const option = document.createElement('option');
             option.value = model;
-            // Shorten name for display
-            const shortName = model.split('/').pop();
             option.textContent = shortName;
+            modelSelect.appendChild(option);
+            
+            // Create beautiful option
+            const opt = document.createElement('div');
+            opt.className = 'custom-select-option';
+            opt.dataset.value = model;
+            opt.innerHTML = `
+                <div class="option-icon">
+                    <i data-lucide="cpu"></i>
+                </div>
+                <div class="option-info">
+                    <div class="option-label">${shortName}</div>
+                    <div class="option-sublabel">Qwen-TTS Architecture</div>
+                </div>
+            `;
+            
             if (model === data.current) {
                 option.selected = true;
-                if (display) display.textContent = shortName;
+                opt.classList.add('selected');
+                if (modelValue) modelValue.textContent = shortName;
             }
-            modelSelect.appendChild(option);
+
+            opt.onclick = (e) => {
+                e.stopPropagation();
+                if (opt.classList.contains('selected')) {
+                    toggleDropdown('modelOptions', false);
+                    return;
+                }
+                handleModelSwitch({ target: { value: model } });
+                toggleDropdown('modelOptions', false);
+            };
+
+            modelOptions.appendChild(opt);
         });
 
         // Update model type and UI
@@ -135,6 +259,9 @@ async function loadModels() {
             modelType = data.type;
             updateUIForModelType();
         }
+
+        // Initialize Lucide icons
+        if (window.lucide) lucide.createIcons();
     } catch (error) {
         console.error('Error loading models:', error);
         showError('Failed to load models');
@@ -180,6 +307,15 @@ async function handleModelSwitch(e) {
 
     showLoading();
     
+    // Update UI immediately
+    const modelValue = document.getElementById('modelValue');
+    const shortName = newModel.split('/').pop();
+    if (modelValue) modelValue.textContent = shortName;
+    
+    document.querySelectorAll('#modelOptions .custom-select-option').forEach(opt => {
+        opt.classList.toggle('selected', opt.dataset.value === newModel);
+    });
+
     try {
         const response = await fetch(`${API_BASE}/api/switch_model`, {
             method: 'POST',
@@ -195,9 +331,9 @@ async function handleModelSwitch(e) {
         const result = await response.json();
         modelType = result.type;
         
-        // Update display name
+        // Update display name in header badge if it exists
         const display = document.getElementById('currentModelDisplay');
-        if (display) display.textContent = newModel.split('/').pop();
+        if (display) display.textContent = shortName;
         
         updateUIForModelType();
         hideLoading();
@@ -207,6 +343,8 @@ async function handleModelSwitch(e) {
         console.error('Error switching model:', error);
         hideLoading();
         showError(error.message);
+        // Revert UI on error
+        loadModels(); 
     }
 }
 
@@ -491,6 +629,10 @@ function performReset() {
     document.getElementById('refText').value = '';
     document.getElementById('refAudioName').textContent = 'Click to upload or drag reference audio (wav/mp3)';
     
+    // Reset voice selection
+    const voiceKeys = Object.keys(voices);
+    if (voiceKeys.length > 0) selectVoice(voiceKeys[0]);
+
     // Reset player
     document.getElementById('audioPlayer').classList.remove('visible');
     const audio = document.getElementById('audioElement');
