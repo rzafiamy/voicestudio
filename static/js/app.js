@@ -29,7 +29,19 @@ function setupEventListeners() {
     if (speakerSelect) speakerSelect.addEventListener('change', updateVoiceDescription);
     modelSelect.addEventListener('change', handleModelSwitch);
     fileInput.addEventListener('change', handleFileUpload);
-    if (newSessionBtn) newSessionBtn.addEventListener('click', resetEditor);
+    if (newSessionBtn) newSessionBtn.addEventListener('click', () => {
+        showModal('confirmModal', () => {
+            performReset();
+        });
+    });
+
+    // Modal close listeners
+    document.getElementById('modalCancel').onclick = () => hideModal('confirmModal');
+    document.getElementById('modalConfirm').onclick = () => {
+        const modal = document.getElementById('confirmModal');
+        if (modal.onConfirm) modal.onConfirm();
+        hideModal('confirmModal');
+    };
 }
 
 // Load voices from API
@@ -403,19 +415,33 @@ async function promoteToRef(filename) {
 }
 
 function resetEditor() {
-    if (confirm('Start a new session? This will clear your current script and reference settings.')) {
-        document.getElementById('text').value = '';
-        document.getElementById('instruct').value = '';
-        document.getElementById('refAudioPath').value = '';
-        document.getElementById('refText').value = '';
-        document.getElementById('refAudioName').textContent = 'Click to upload or drag reference audio (wav/mp3)';
-        
-        // Reset player
-        document.getElementById('audioPlayer').classList.remove('visible');
-        document.getElementById('audioElement').pause();
-        document.getElementById('audioElement').src = '';
-        
-        updateCharCount();
-        showSuccess('New session started');
-    }
+    // This is now handled by the event listener calling showModal
+}
+
+function showModal(id, onConfirm) {
+    const modal = document.getElementById(id);
+    modal.classList.add('active');
+    modal.onConfirm = onConfirm;
+}
+
+function hideModal(id) {
+    const modal = document.getElementById(id);
+    modal.classList.remove('active');
+}
+
+function performReset() {
+    document.getElementById('text').value = '';
+    document.getElementById('instruct').value = '';
+    document.getElementById('refAudioPath').value = '';
+    document.getElementById('refText').value = '';
+    document.getElementById('refAudioName').textContent = 'Click to upload or drag reference audio (wav/mp3)';
+    
+    // Reset player
+    document.getElementById('audioPlayer').classList.remove('visible');
+    const audio = document.getElementById('audioElement');
+    audio.pause();
+    audio.src = '';
+    
+    updateCharCount();
+    showSuccess('New session started');
 }

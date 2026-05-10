@@ -487,3 +487,98 @@ audio {
 
 .toast.error { border-left: 4px solid var(--accent-vibrant); }
 .toast.success { border-left: 4px solid #10b981; }
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.modal-overlay.active {
+    display: flex;
+    opacity: 1;
+}
+
+.modal-content {
+    background: var(--bg-card);
+    border: 1px solid var(--border-main);
+    border-radius: 24px;
+    width: 100%;
+    max-width: 450px;
+    padding: 2.5rem;
+    box-shadow: var(--shadow-premium);
+    transform: translateY(20px);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.modal-overlay.active .modal-content {
+    transform: translateY(0);
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.modal-header h3 {
+    font-size: 1.5rem;
+    font-family: 'Outfit', sans-serif;
+}
+
+.modal-body {
+    margin-bottom: 2.5rem;
+}
+
+.modal-body p {
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+.btn-secondary {
+    background: transparent;
+    border: 1px solid var(--border-main);
+    color: var(--text-muted);
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+    background: var(--bg-input);
+    color: var(--text-main);
+}
+
+.btn-primary {
+    background: var(--accent-primary);
+    border: none;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+}
