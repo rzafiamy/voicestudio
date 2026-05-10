@@ -39,19 +39,12 @@ else
     pip install -r requirements.txt
 fi
 
-# 3. Handle Flash Attention
-echo -e "${BLUE}Checking for Flash Attention...${NC}"
-if [[ "$PYTHON_VERSION" == "3.11" ]]; then
-    if [ -f "flash_attn-2.6.3+cu128torch2.10-cp311-cp311-linux_x86_64.whl" ]; then
-        echo -e "${YELLOW}Python 3.11 detected. Installing provided Flash Attention wheel...${NC}"
-        pip install flash_attn-2.6.3+cu128torch2.10-cp311-cp311-linux_x86_64.whl || echo -e "${RED}Wheel installation failed, skipping...${NC}"
-    fi
-else
-    echo -e "${YELLOW}Python $PYTHON_VERSION detected. Skipping provided cp311 wheel.${NC}"
-    echo -e "${YELLOW}Attempting to install flash-attn via pip (requires CUDA)...${NC}"
-    # We don't force it as it often requires heavy compilation
-    pip install flash-attn --no-build-isolation || echo -e "${YELLOW}Flash Attention installation skipped or failed. This is fine, the app will still work.${NC}"
-fi
+# 3. Handle Flash Attention (optional, recommended for CUDA GPUs)
+echo -e "${BLUE}Attempting to install Flash Attention (optional)...${NC}"
+echo -e "${YELLOW}If this fails, download a pre-built wheel from:${NC}"
+echo -e "${YELLOW}  https://github.com/Dao-AILab/flash-attention/releases${NC}"
+echo -e "${YELLOW}Then run: pip install <wheel-file>${NC}"
+pip install flash-attn --no-build-isolation || echo -e "${YELLOW}Flash Attention skipped — the app will work without it.${NC}"
 
 # 4. Success
 echo -e "${GREEN}=== Setup Complete! ===${NC}"
