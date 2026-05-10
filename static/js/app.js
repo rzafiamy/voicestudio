@@ -5,6 +5,9 @@ const API_BASE = '';
 let voices = {};
 let currentAudio = null;
 let modelType = 'CustomVoice';  // Track current model type
+let historyData = [];           // Store history for searching
+let synthesisTimerInterval = null;
+let synthesisStartTime = 0;
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
@@ -29,6 +32,10 @@ function setupEventListeners() {
     if (speakerSelect) speakerSelect.addEventListener('change', updateVoiceDescription);
     modelSelect.addEventListener('change', handleModelSwitch);
     fileInput.addEventListener('change', handleFileUpload);
+    
+    const searchInput = document.getElementById('historySearch');
+    if (searchInput) searchInput.addEventListener('input', handleSearch);
+
     if (newSessionBtn) newSessionBtn.addEventListener('click', () => {
         showModal('confirmModal', () => {
             performReset();
@@ -275,12 +282,37 @@ function showLoading() {
     const loader = document.getElementById('loadingState');
     if (loader) loader.style.display = 'flex';
     document.getElementById('generateBtn').disabled = true;
+
+    // Start timer
+    synthesisStartTime = Date.now();
+    const timerDisplay = document.getElementById('synthesisTimer');
+    const progressBar = document.getElementById('synthesisProgress');
+    
+    if (timerDisplay) timerDisplay.textContent = '0.0s';
+    if (progressBar) progressBar.style.width = '0%';
+
+    synthesisTimerInterval = setInterval(() => {
+        const elapsed = (Date.now() - synthesisStartTime) / 1000;
+        if (timerDisplay) timerDisplay.textContent = `${elapsed.toFixed(1)}s`;
+        
+        // Simulate progress (slows down as it gets higher)
+        if (progressBar) {
+            let progress = (1 - Math.exp(-elapsed / 10)) * 95; // Asymptotically approaches 95%
+            progressBar.style.width = `${progress}%`;
+        }
+    }, 100);
 }
 
 function hideLoading() {
     const loader = document.getElementById('loadingState');
     if (loader) loader.style.display = 'none';
     document.getElementById('generateBtn').disabled = false;
+
+    // Stop timer
+    if (synthesisTimerInterval) {
+        clearInterval(synthesisTimerInterval);
+        synthesisTimerInterval = null;
+    }
 }
 
 function showAudioPlayer(result) {
@@ -304,8 +336,9 @@ function showError(message) {
     const container = document.getElementById('errorMessage');
     const toast = document.createElement('div');
     toast.className = 'toast error';
-    toast.innerHTML = `<span class="material-icons">error_outline</span> <span>${message}</span>`;
+    toast.innerHTML = `<i data-lucide="alert-circle"></i> <span>${message}</span>`;
     container.appendChild(toast);
+    lucide.createIcons();
     setTimeout(() => toast.remove(), 5000);
 }
 
@@ -313,8 +346,9 @@ function showSuccess(message) {
     const container = document.getElementById('errorMessage');
     const toast = document.createElement('div');
     toast.className = 'toast success';
-    toast.innerHTML = `<span class="material-icons">check_circle_outline</span> <span>${message}</span>`;
+    toast.innerHTML = `<i data-lucide="check-circle"></i> <span>${message}</span>`;
     container.appendChild(toast);
+    lucide.createIcons();
     setTimeout(() => toast.remove(), 3000);
 }
 
@@ -322,22 +356,38 @@ function showSuccess(message) {
 async function loadHistory() {
     try {
         const response = await fetch(`${API_BASE}/api/history`);
-        const history = await response.json();
-        const historyList = document.getElementById('historyList');
-
-        if (history.length === 0) {
-            historyList.innerHTML = '<p class="empty-state">No productions yet</p>';
-            return;
-        }
-
-        historyList.innerHTML = '';
-        history.forEach(item => {
-            const el = createHistoryItem(item);
-            historyList.appendChild(el);
-        });
+        historyData = await response.json();
+        renderHistory(historyData);
     } catch (error) {
         console.error('Error loading history:', error);
     }
+}
+
+function renderHistory(data) {
+    const historyList = document.getElementById('historyList');
+
+    if (data.length === 0) {
+        historyList.innerHTML = '<p class="empty-state">No productions yet</p>';
+        return;
+    }
+
+    historyList.innerHTML = '';
+    data.forEach(item => {
+        const el = createHistoryItem(item);
+        historyList.appendChild(el);
+    });
+    
+    // Render Lucide icons
+    if (window.lucide) lucide.createIcons();
+}
+
+function handleSearch(e) {
+    const query = e.target.value.toLowerCase();
+    const filtered = historyData.filter(item => 
+        item.text.toLowerCase().includes(query) || 
+        (item.speaker && item.speaker.toLowerCase().includes(query))
+    );
+    renderHistory(filtered);
 }
 
 function createHistoryItem(item) {
@@ -347,11 +397,16 @@ function createHistoryItem(item) {
     // Add active state if it's the current playing audio (optional)
     
     div.innerHTML = `
-        <div class="history-item-header">
-            <span>${item.speaker || (item.model_type === 'Base' ? 'Clone' : 'Design')}</span>
-            <span>${formatTimeOnly(item.timestamp)}</span>
+        <div class="history-item-icon">
+            <i data-lucide="music"></i>
         </div>
-        <div class="history-item-text">${item.text}</div>
+        <div class="history-item-content">
+            <div class="history-item-header">
+                <span>${item.speaker || (item.model_type === 'Base' ? 'Clone' : 'Design')}</span>
+                <span>${formatTimeOnly(item.timestamp)}</span>
+            </div>
+            <div class="history-item-text">${item.text}</div>
+        </div>
     `;
     
     div.onclick = () => {

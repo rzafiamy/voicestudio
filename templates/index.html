@@ -7,7 +7,8 @@
     <title>Makix Studio | Professional AI Voice Platform</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
 <body>
@@ -15,14 +16,14 @@
     <aside class="sidebar">
         <div class="sidebar-header">
             <div class="logo-icon">
-                <span class="material-icons">graphic_eq</span>
+                <i data-lucide="waves"></i>
             </div>
             <h1 class="logo-text">Makix Studio</h1>
         </div>
 
         <div style="padding: 0 1rem 1rem;">
             <button id="newSessionBtn" class="btn-new-session">
-                <span class="material-icons">add</span>
+                <i data-lucide="plus"></i>
                 NEW SESSION
             </button>
         </div>
@@ -43,13 +44,22 @@
     <!-- Main Workspace -->
     <main class="main-wrapper">
         <header class="top-bar">
-            <div class="model-badge">
-                <div class="status-dot"></div>
-                <span id="currentModelDisplay">Loading Model...</span>
+            <div class="header-left">
+                <div class="model-badge">
+                    <div class="status-dot"></div>
+                    <span id="currentModelDisplay">Loading Model...</span>
+                </div>
             </div>
             
+            <div class="header-center">
+                <div class="search-container">
+                    <i data-lucide="search" class="search-icon"></i>
+                    <input type="text" id="historySearch" placeholder="Search sessions...">
+                </div>
+            </div>
+
             <div class="top-actions">
-                <select id="model" name="model" class="model-selector-top" style="background: transparent; border: 1px solid var(--border-main); color: var(--text-main); padding: 0.4rem 1rem; border-radius: 8px; font-size: 0.85rem;">
+                <select id="model" name="model" class="model-selector-top">
                     <option value="">Select Model</option>
                 </select>
             </div>
@@ -60,8 +70,14 @@
                 <div class="editor-card">
                     <!-- Loading Overlay inside card -->
                     <div id="loadingState" class="loading-overlay">
-                        <div class="spinner-ring"></div>
-                        <p style="margin-top: 1.5rem; font-weight: 500; letter-spacing: 0.05em;">SYNTHESIZING AUDIO...</p>
+                        <div class="spinner-container">
+                            <div class="spinner-ring"></div>
+                            <div class="timer-display" id="synthesisTimer">0.0s</div>
+                        </div>
+                        <p class="loading-text">SYNTHESIZING AUDIO...</p>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" id="synthesisProgress"></div>
+                        </div>
                     </div>
 
                     <div class="text-area-container">
@@ -75,7 +91,7 @@
                         <!-- Voice -->
                         <div class="control-group" id="speakerGroup">
                             <label for="speaker">
-                                <span class="material-icons" style="font-size: 1rem;">person</span>
+                                <i data-lucide="user" style="width: 14px; height: 14px;"></i>
                                 Speaker
                             </label>
                             <select id="speaker" name="speaker" required>
@@ -87,7 +103,7 @@
                         <!-- Language -->
                         <div class="control-group">
                             <label for="language">
-                                <span class="material-icons" style="font-size: 1rem;">language</span>
+                                <i data-lucide="languages" style="width: 14px; height: 14px;"></i>
                                 Language
                             </label>
                             <select id="language" name="language" required>
@@ -98,7 +114,7 @@
                         <!-- Style / Instruction -->
                         <div class="control-group" id="instructGroup">
                             <label for="instruct">
-                                <span class="material-icons" style="font-size: 1rem;">tune</span>
+                                <i data-lucide="sliders" style="width: 14px; height: 14px;"></i>
                                 Style Instruction
                             </label>
                             <input type="text" id="instruct" name="instruct" placeholder="e.g. 'Energetic' or 'Whisper'">
@@ -107,11 +123,11 @@
                         <!-- Cloning Controls (Hidden by default) -->
                         <div class="control-group full-width" id="refAudioGroup" style="display: none;">
                             <label>
-                                <span class="material-icons" style="font-size: 1rem;">settings_voice</span>
+                                <i data-lucide="mic" style="width: 14px; height: 14px;"></i>
                                 Reference Voice
                             </label>
                             <div class="file-dropzone" onclick="document.getElementById('refAudioFile').click()">
-                                <span class="material-icons" style="font-size: 2rem; color: var(--accent-primary); margin-bottom: 0.5rem;">upload</span>
+                                <i data-lucide="upload-cloud" style="width: 32px; height: 32px; color: var(--accent-primary); margin-bottom: 0.5rem;"></i>
                                 <p id="refAudioName">Click to upload or drag reference audio (wav/mp3)</p>
                                 <input type="file" id="refAudioFile" accept="audio/*" style="display: none;">
                                 <input type="hidden" id="refAudioPath">
@@ -120,7 +136,7 @@
 
                         <div class="control-group full-width" id="refTextGroup" style="display: none;">
                             <label for="refText">
-                                <span class="material-icons" style="font-size: 1rem;">description</span>
+                                <i data-lucide="file-text" style="width: 14px; height: 14px;"></i>
                                 Reference Transcription (Optional)
                             </label>
                             <input type="text" id="refText" name="refText" placeholder="Enter what is being said in the reference audio for better results">
@@ -130,7 +146,7 @@
 
                 <div class="action-area">
                     <button type="submit" class="btn-produce" id="generateBtn">
-                        <span class="material-icons">play_arrow</span>
+                        <i data-lucide="play"></i>
                         PRODUCE AUDIO
                     </button>
                 </div>
@@ -143,7 +159,7 @@
         <!-- Floating Player (Visible after generation) -->
         <div id="audioPlayer" class="floating-player">
             <div class="logo-icon" style="width: 50px; height: 50px;">
-                <span class="material-icons">volume_up</span>
+                <i data-lucide="volume-2"></i>
             </div>
             <div class="player-meta">
                 <div class="player-title">Latest Production</div>
@@ -154,7 +170,7 @@
                 <audio id="audioElement" controls></audio>
             </div>
             <button onclick="document.getElementById('audioPlayer').classList.remove('visible')" class="btn-close" style="background: transparent; border: none; color: var(--text-dim); cursor: pointer;">
-                <span class="material-icons">close</span>
+                <i data-lucide="x"></i>
             </button>
         </div>
 
@@ -162,7 +178,7 @@
         <div id="confirmModal" class="modal-overlay">
             <div class="modal-content">
                 <div class="modal-header">
-                    <span class="material-icons" style="color: var(--accent-primary);">help_outline</span>
+                    <i data-lucide="help-circle" style="color: var(--accent-primary);"></i>
                     <h3>Start New Session?</h3>
                 </div>
                 <div class="modal-body">
@@ -177,6 +193,10 @@
     </main>
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
 </body>
 
 </html>
