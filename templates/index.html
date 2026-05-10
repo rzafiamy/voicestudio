@@ -8,8 +8,14 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Lucide Icons -->
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Wavesurfer for beautiful audio visualization -->
+    <script src="https://unpkg.com/wavesurfer.js@7"></script>
+    <!-- Marked for markdown support -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
+
 
 <body>
     <!-- Sidebar: Library & Navigation -->
@@ -77,7 +83,8 @@
             </div>
         </header>
 
-        <section class="workbench">
+        <section class="workbench" id="workbenchSection" style="display: none;">
+
             <form id="generateForm">
                 <div class="editor-card">
                     <!-- Loading Overlay inside card -->
@@ -177,9 +184,88 @@
                 </div>
             </form>
 
+            <!-- View Mode: Session Details -->
+            <div id="sessionView" class="session-view-container" style="display: none;">
+                <div class="editor-card">
+                    <div class="view-header">
+                        <div class="view-title-group">
+                            <h2 id="viewTitle">Production Details</h2>
+                            <p id="viewTimestamp" class="view-subtitle"></p>
+                        </div>
+                        <div class="view-badges" id="viewBadges">
+                            <!-- Badges injected here -->
+                        </div>
+                    </div>
+
+                    <div class="view-text-content">
+                        <div class="view-label-row">
+                            <div class="view-label">Script</div>
+                            <button id="copyTranscriptBtn" class="btn-icon-text" title="Copy to clipboard">
+                                <i data-lucide="copy"></i>
+                                <span>Copy</span>
+                            </button>
+                        </div>
+                        <div id="viewText" class="view-text scrollable-script"></div>
+                    </div>
+
+                    <div class="view-metrics-grid">
+                        <div class="metric-item">
+                            <div class="metric-label">Duration</div>
+                            <div id="viewDuration" class="metric-value">-</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Efficiency</div>
+                            <div id="viewEfficiency" class="metric-value">-</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Model</div>
+                            <div id="viewModel" class="metric-value">-</div>
+                        </div>
+                    </div>
+                    
+                    <div class="view-player-area">
+                        <div id="waveform" style="width: 100%;"></div>
+                        <div class="waveform-controls">
+                            <button id="playPauseBtn" class="btn-play-pause">
+                                <i data-lucide="play" id="playIcon"></i>
+                            </button>
+                            <div id="waveTime" class="wave-time">00:00 / 00:00</div>
+                        </div>
+                        <audio id="viewAudioElement" style="display: none;"></audio>
+                    </div>
+                </div>
+
+
+                <div class="action-area">
+                    <button id="editInStudioBtn" class="btn-secondary" style="padding: 1.25rem 3rem; font-size: 1rem; display: flex; align-items: center; gap: 0.75rem;">
+                        <i data-lucide="edit-3"></i>
+                        LOAD INTO STUDIO
+                    </button>
+                </div>
+            </div>
+
+
             <!-- Error message container -->
             <div id="errorMessage" class="toast-container"></div>
         </section>
+
+        <!-- Empty State View -->
+        <section id="emptyState" class="empty-workbench-state">
+            <div class="empty-content">
+                <div class="empty-icon-ring">
+                    <i data-lucide="sparkles"></i>
+                </div>
+                <h2>Ready for Production</h2>
+                <p>Select a studio model from the menu above to begin creating professional AI voice content.</p>
+                <div class="empty-actions">
+                    <button class="btn-primary" onclick="document.getElementById('modelTrigger').click()">
+                        <i data-lucide="cpu"></i>
+                        Select Model
+                    </button>
+                </div>
+            </div>
+        </section>
+
 
         <!-- Floating Player (Visible after generation) -->
         <div id="audioPlayer" class="floating-player">

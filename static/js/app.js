@@ -8,6 +8,10 @@ let modelType = 'CustomVoice';  // Track current model type
 let historyData = [];           // Store history for searching
 let synthesisTimerInterval = null;
 let synthesisStartTime = 0;
+let wavesurfer = null;         // Wavesurfer instance
+let currentViewItem = null;    // Track currently viewed history item
+
+
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
@@ -95,6 +99,28 @@ function setupEventListeners() {
         toggleDropdown('modelOptions', false);
     };
 
+    // Edit in studio button
+    const editBtn = document.getElementById('editInStudioBtn');
+    if (editBtn) {
+        editBtn.onclick = () => {
+            if (currentViewItem) {
+                switchToEditMode(currentViewItem);
+            }
+        };
+    }
+
+    // Copy transcript button
+    const copyBtn = document.getElementById('copyTranscriptBtn');
+    if (copyBtn) {
+        copyBtn.onclick = () => {
+            if (currentViewItem) {
+                navigator.clipboard.writeText(currentViewItem.text).then(() => {
+                    showSuccess('Script copied to clipboard');
+                });
+            }
+        };
+    }
+
     // Modal close listeners
     document.getElementById('modalCancel').onclick = () => hideModal('confirmModal');
     document.getElementById('modalConfirm').onclick = () => {
@@ -103,6 +129,8 @@ function setupEventListeners() {
         hideModal('confirmModal');
     };
 }
+
+
 
 function toggleDropdown(id, force) {
     const options = document.getElementById(id);
@@ -289,6 +317,8 @@ async function loadModels() {
             updateUIForModelType();
         }
 
+        updateWorkbenchVisibility();
+
         // Initialize Lucide icons
         if (window.lucide) lucide.createIcons();
     } catch (error) {
@@ -365,6 +395,7 @@ async function handleModelSwitch(e) {
         if (display) display.textContent = info.name;
         
         updateUIForModelType();
+        updateWorkbenchVisibility();
         hideLoading();
         showSuccess(`Active Model: ${result.type}`);
 
@@ -445,7 +476,27 @@ async function handleGenerate(e) {
     }
 }
 
+// Update workbench visibility based on selection
+function updateWorkbenchVisibility() {
+    const modelSelect = document.getElementById('model');
+    const workbench = document.getElementById('workbenchSection');
+    const emptyState = document.getElementById('emptyState');
+    
+    const hasSelection = modelSelect && modelSelect.value !== "";
+    
+    if (hasSelection) {
+        if (workbench) workbench.style.display = 'flex';
+        if (emptyState) emptyState.style.display = 'none';
+    } else {
+        if (workbench) workbench.style.display = 'none';
+        if (emptyState) emptyState.style.display = 'flex';
+    }
+    
+    if (window.lucide) lucide.createIcons();
+}
+
 function showLoading() {
+
     const loader = document.getElementById('loadingState');
     if (loader) loader.style.display = 'flex';
     document.getElementById('generateBtn').disabled = true;
@@ -480,6 +531,146 @@ function hideLoading() {
         clearInterval(synthesisTimerInterval);
         synthesisTimerInterval = null;
     }
+    if (window.lucide) lucide.createIcons();
+}
+
+// Mode Switching Logic
+async function switchToViewMode(item) {
+    currentViewItem = item;
+    
+    const form = document.getElementById('generateForm');
+    const view = document.getElementById('sessionView');
+    const emptyState = document.getElementById('emptyState');
+    const workbench = document.getElementById('workbenchSection');
+
+    // Show workbench if it was hidden
+    if (workbench) workbench.style.display = 'flex';
+    if (emptyState) emptyState.style.display = 'none';
+
+    // Toggle containers
+    if (form) form.style.display = 'none';
+    if (view) view.style.display = 'flex';
+
+    // Populate View with Markdown support
+    const viewText = document.getElementById('viewText');
+    if (window.marked) {
+        viewText.innerHTML = marked.parse(item.text);
+    } else {
+        viewText.textContent = item.text;
+    }
+    
+    document.getElementById('viewTimestamp').textContent = formatTimestamp(item.timestamp);
+    document.getElementById('viewDuration').textContent = item.elapsed_time ? `${item.elapsed_time.toFixed(2)}s` : 'N/A';
+    document.getElementById('viewEfficiency').textContent = item.chars_per_sec ? `${item.chars_per_sec.toFixed(1)} ch/s` : 'N/A';
+    
+    const modelInfo = getFriendlyModelInfo(item.model || '');
+    document.getElementById('viewModel').textContent = modelInfo.name;
+
+    // Badges in view
+    const viewBadges = document.getElementById('viewBadges');
+    viewBadges.innerHTML = '';
+    
+    const modelBadge = document.createElement('div');
+    modelBadge.className = 'badge-mini model';
+    modelBadge.innerHTML = `<i data-lucide="${modelInfo.icon}"></i> <span>${modelInfo.name}</span>`;
+    viewBadges.appendChild(modelBadge);
+
+    if (item.speaker) {
+        const voiceBadge = document.createElement('div');
+        voiceBadge.className = 'badge-mini voice';
+        voiceBadge.innerHTML = `<i data-lucide="mic-2"></i> <span>${item.speaker}</span>`;
+        viewBadges.appendChild(voiceBadge);
+    }
+
+    // Initialize/Refresh Wavesurfer
+    initWavesurfer(`${API_BASE}/api/audio/${item.filename}`);
+
+    if (window.lucide) lucide.createIcons();
+}
+
+function initWavesurfer(audioUrl) {
+    if (wavesurfer) {
+        wavesurfer.destroy();
+    }
+
+    wavesurfer = WaveSurfer.create({
+        container: '#waveform',
+        waveColor: '#4f46e5',
+        progressColor: '#8b5cf6',
+        cursorColor: '#8b5cf6',
+        barWidth: 2,
+        barRadius: 3,
+        responsive: true,
+        height: 80,
+        normalize: true,
+        url: audioUrl
+    });
+
+    const playBtn = document.getElementById('playPauseBtn');
+    const playIcon = document.getElementById('playIcon');
+    const waveTime = document.getElementById('waveTime');
+
+    playBtn.onclick = () => wavesurfer.playPause();
+
+    wavesurfer.on('play', () => {
+        playIcon.setAttribute('data-lucide', 'pause');
+        lucide.createIcons();
+    });
+
+    wavesurfer.on('pause', () => {
+        playIcon.setAttribute('data-lucide', 'play');
+        lucide.createIcons();
+    });
+
+    wavesurfer.on('audioprocess', () => {
+        const currentTime = formatTime(wavesurfer.getCurrentTime());
+        const duration = formatTime(wavesurfer.getDuration());
+        waveTime.textContent = `${currentTime} / ${duration}`;
+    });
+
+    wavesurfer.on('ready', () => {
+        const duration = formatTime(wavesurfer.getDuration());
+        waveTime.textContent = `00:00 / ${duration}`;
+    });
+}
+
+function formatTime(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+function switchToEditMode(item = null) {
+
+    const form = document.getElementById('generateForm');
+    const view = document.getElementById('sessionView');
+    
+    if (form) form.style.display = 'block';
+    if (view) view.style.display = 'none';
+
+    if (item) {
+        // Populate form from item
+        document.getElementById('text').value = item.text;
+        if (item.language) document.getElementById('language').value = item.language;
+        if (item.instruct !== undefined) document.getElementById('instruct').value = item.instruct;
+        
+        // Model switch
+        const currentModel = document.getElementById('model').value;
+        if (item.model && item.model !== currentModel) {
+            handleModelSwitch({ target: { value: item.model } }).then(() => {
+                if (item.speaker && modelType === 'CustomVoice') {
+                    selectVoice(item.speaker);
+                }
+            });
+        } else {
+            if (item.speaker && modelType === 'CustomVoice') {
+                selectVoice(item.speaker);
+            }
+        }
+    }
+    
+    updateCharCount();
+    if (window.lucide) lucide.createIcons();
 }
 
 function showAudioPlayer(result) {
@@ -586,23 +777,13 @@ function createHistoryItem(item) {
             </div>
         </div>
     `;
-    
     div.onclick = () => {
-        // Switch to this audio in the player
-        showAudioPlayer({
-            filename: item.filename,
-            timestamp: item.timestamp,
-            elapsed_time: item.elapsed_time,
-            chars_per_sec: item.chars_per_sec
-        });
-        
         // Mark as active
         document.querySelectorAll('.history-item').forEach(i => i.classList.remove('active'));
         div.classList.add('active');
         
-        // Load into editor
-        document.getElementById('text').value = item.text;
-        updateCharCount();
+        // SWITCH TO VIEW MODE
+        switchToViewMode(item);
     };
 
     return div;
@@ -669,6 +850,9 @@ function performReset() {
     document.getElementById('refText').value = '';
     document.getElementById('refAudioName').textContent = 'Click to upload or drag reference audio (wav/mp3)';
     
+    // Clear history selection
+    document.querySelectorAll('.history-item').forEach(i => i.classList.remove('active'));
+
     // Reset voice selection
     const voiceKeys = Object.keys(voices);
     if (voiceKeys.length > 0) selectVoice(voiceKeys[0]);
@@ -679,6 +863,9 @@ function performReset() {
     audio.pause();
     audio.src = '';
     
-    updateCharCount();
+    // Reset UI mode
+    switchToEditMode();
+    
     showSuccess('New session started');
 }
+
