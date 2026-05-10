@@ -95,10 +95,13 @@ def load_model(model_path):
         del model
         model = None
         gc.collect()
+        gc.collect() # Double collect for circular references
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
-            torch.cuda.synchronize() # Wait for all asynchronous CUDA operations to finish
-            time.sleep(0.5) # Give the driver a moment to settle
+            torch.cuda.ipc_collect()
+            torch.cuda.synchronize()
+            time.sleep(0.2)
+
             
     model_path = model_path.rstrip('/')
     print(f"Loading model: {model_path}")
@@ -173,6 +176,41 @@ def load_model(model_path):
             torch.cuda.empty_cache()
             torch.cuda.synchronize()
         raise e
+
+@app.route('/api/vram', methods=['GET'])
+def get_vram_status():
+    """Get GPU memory usage status"""
+    if not torch.cuda.is_available():
+        return jsonify({
+            "available": False,
+            "total": 0,
+            "allocated": 0,
+            "reserved": 0,
+            "free": 0,
+            "percentage": 0
+        })
+    
+    try:
+        # torch.cuda.memory_reserved is what is actually claimed from the OS
+        # torch.cuda.memory_allocated is what is currently used by tensors
+        total = torch.cuda.get_device_properties(0).total_memory
+        allocated = torch.cuda.memory_allocated(0)
+        reserved = torch.cuda.memory_reserved(0)
+        
+        # We'll use 'reserved' as the main metric since it shows what the app has "taken"
+        # but 'allocated' is also important.
+        percentage = (reserved / total) * 100 if total > 0 else 0
+        
+        return jsonify({
+            "available": True,
+            "total": total,
+            "allocated": allocated,
+            "reserved": reserved,
+            "percentage": percentage,
+            "device": torch.cuda.get_device_name(0)
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/')
 def index():
@@ -297,7 +335,6 @@ def generate_audio():
                 ref_text = data.get('ref_text')
                 
                 # Use 'xvec_only' if user requests it OR if ref_text is missing
-                # This allows cloning even if the user didn't transcribe the audio
                 x_vector_only_mode = data.get('x_vector_only', False)
                 if not ref_text:
                     x_vector_only_mode = True
@@ -305,30 +342,34 @@ def generate_audio():
                 if not ref_audio_path:
                     return jsonify({"error": "Base model requires 'ref_audio_path' for voice cloning"}), 400
                     
-                # Check if ref_audio_path is a stored file or needs full path
                 if not os.path.isabs(ref_audio_path):
-                    # Check in storage dir if it's a filename
                     possible_path = STORAGE_DIR / ref_audio_path
                     if possible_path.exists():
                         ref_audio_path = str(possible_path)
                 
                 print(f"Cloning voice from: {ref_audio_path} (X-Vector Mode: {x_vector_only_mode})")
                 
-                # Create prompt - caches features for better performance
+                # Create prompt
                 prompt_items = model.create_voice_clone_prompt(
                     ref_audio=ref_audio_path,
                     ref_text=ref_text if not x_vector_only_mode else None,
                     x_vector_only_mode=x_vector_only_mode
                 )
                 
-                wavs, sr = model.generate_voice_clone(
-                    text=text,
-                    language=language,
-                    voice_clone_prompt=prompt_items,
-                    **gen_kwargs
-                )
+                try:
+                    wavs, sr = model.generate_voice_clone(
+                        text=text,
+                        language=language,
+                        voice_clone_prompt=prompt_items,
+                        **gen_kwargs
+                    )
+                finally:
+                    # Cleanup tensors
+                    del prompt_items
+                    gc.collect()
             else:
                 return jsonify({"error": f"Unknown model type: {model_type}"}), 500
+
         
         end_time = time.time()
         elapsed_time = end_time - start_time

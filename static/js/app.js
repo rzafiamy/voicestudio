@@ -20,7 +20,52 @@ document.addEventListener('DOMContentLoaded', () => {
     loadModels();
     loadHistory();
     setupEventListeners();
+    
+    // Initial VRAM check and set interval
+    updateVRAMStatus();
+    setInterval(updateVRAMStatus, 3000);
 });
+
+// VRAM Monitoring
+async function updateVRAMStatus() {
+    try {
+        const response = await fetch(`${API_BASE}/api/vram`);
+        const data = await response.json();
+        
+        const monitor = document.getElementById('vramMonitor');
+        const text = document.getElementById('vramText');
+        const fill = document.getElementById('vramFill');
+        
+        if (!data.available) {
+            if (monitor) monitor.style.display = 'none';
+            return;
+        }
+        
+        if (monitor) monitor.style.display = 'flex';
+        
+        // Convert to GB
+        const totalGB = (data.total / (1024 ** 3)).toFixed(1);
+        const reservedGB = (data.reserved / (1024 ** 3)).toFixed(1);
+        const allocatedGB = (data.allocated / (1024 ** 3)).toFixed(1);
+        
+        if (text) text.textContent = `${reservedGB} / ${totalGB} GB`;
+        
+        if (fill) {
+            const percentage = data.percentage;
+            fill.style.width = `${percentage}%`;
+            
+            // Update color based on usage
+            fill.classList.remove('warning', 'critical');
+            if (percentage > 90) {
+                fill.classList.add('critical');
+            } else if (percentage > 75) {
+                fill.classList.add('warning');
+            }
+        }
+    } catch (error) {
+        console.error('Error fetching VRAM status:', error);
+    }
+}
 
 // Helper for friendly model names
 function getFriendlyModelInfo(technicalName) {
@@ -401,6 +446,7 @@ async function handleModelSwitch(e) {
         
         updateUIForModelType();
         updateWorkbenchVisibility();
+        updateVRAMStatus(); // Update VRAM immediately after switch
         hideLoading();
         showSuccess(`Active Model: ${result.type}`);
 
