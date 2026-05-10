@@ -20,6 +20,13 @@
             <h1 class="logo-text">Makix Studio</h1>
         </div>
 
+        <div style="padding: 0 1rem 1rem;">
+            <button id="newSessionBtn" class="btn-new-session">
+                <span class="material-icons">add</span>
+                NEW SESSION
+            </button>
+        </div>
+
         <nav class="sidebar-nav">
             <div class="nav-section-title">Generation History</div>
             <div id="historyList" class="history-list">
@@ -149,6 +156,23 @@
             <button onclick="document.getElementById('audioPlayer').classList.remove('visible')" class="btn-close" style="background: transparent; border: none; color: var(--text-dim); cursor: pointer;">
                 <span class="material-icons">close</span>
             </button>
+        </div>
+
+        <!-- Custom Confirmation Modal -->
+        <div id="confirmModal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span class="material-icons" style="color: var(--accent-primary);">help_outline</span>
+                    <h3>Start New Session?</h3>
+                </div>
+                <div class="modal-body">
+                    <p>This will clear your current script and reference settings. This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button id="modalCancel" class="btn-secondary">Cancel</button>
+                    <button id="modalConfirm" class="btn-primary">Confirm</button>
+                </div>
+            </div>
         </div>
     </main>
 

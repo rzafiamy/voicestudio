@@ -22,12 +22,14 @@ function setupEventListeners() {
     const speakerSelect = document.getElementById('speaker');
     const modelSelect = document.getElementById('model');
     const fileInput = document.getElementById('refAudioFile');
+    const newSessionBtn = document.getElementById('newSessionBtn');
 
     form.addEventListener('submit', handleGenerate);
     textArea.addEventListener('input', updateCharCount);
     if (speakerSelect) speakerSelect.addEventListener('change', updateVoiceDescription);
     modelSelect.addEventListener('change', handleModelSwitch);
     fileInput.addEventListener('change', handleFileUpload);
+    if (newSessionBtn) newSessionBtn.addEventListener('click', resetEditor);
 }
 
 // Load voices from API
@@ -398,4 +400,22 @@ async function handleFileUpload(e) {
 async function promoteToRef(filename) {
     // (Existing logic for promotion if needed)
     // For now the UI triggers it from JS if we had a button in history
+}
+
+function resetEditor() {
+    if (confirm('Start a new session? This will clear your current script and reference settings.')) {
+        document.getElementById('text').value = '';
+        document.getElementById('instruct').value = '';
+        document.getElementById('refAudioPath').value = '';
+        document.getElementById('refText').value = '';
+        document.getElementById('refAudioName').textContent = 'Click to upload or drag reference audio (wav/mp3)';
+        
+        // Reset player
+        document.getElementById('audioPlayer').classList.remove('visible');
+        document.getElementById('audioElement').pause();
+        document.getElementById('audioElement').src = '';
+        
+        updateCharCount();
+        showSuccess('New session started');
+    }
 }
