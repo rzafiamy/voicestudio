@@ -119,11 +119,14 @@ def load_model(model_path):
             "dtype": torch.float16 if torch.cuda.is_available() else torch.float32,
         }
         
-        # Try to use Flash Attention 2
+        # Try to use Flash Attention 2 (requires both the package and CUDA)
         try:
             import flash_attn
-            model_kwargs["attn_implementation"] = "flash_attention_2"
-            print("⚡ Flash Attention 2 enabled")
+            if torch.cuda.is_available():
+                model_kwargs["attn_implementation"] = "flash_attention_2"
+                print("⚡ Flash Attention 2 enabled")
+            else:
+                print("⚠️ Flash Attention 2 skipped (no CUDA), using default attention")
         except ImportError:
             print("⚠️ Flash Attention 2 not found, using default attention")
 
@@ -275,7 +278,6 @@ DEFAULT_GEN_KWARGS = dict(
     subtalker_top_k=50,
     subtalker_top_p=1.0,
     subtalker_temperature=0.9,
-    use_cache=True,  # Enable KV-cache for faster generation
 )
 
 @app.route('/api/generate', methods=['POST'])
