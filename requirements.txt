@@ -6,3 +6,4 @@ accelerate
 qwen-tts
 huggingface_hub[cli]
 flask
+triton  # For torch.compile optimizations

@@ -9,6 +9,12 @@ import soundfile as sf
 from flask import Flask, render_template, request, jsonify, send_file
 from qwen_tts import Qwen3TTSModel
 
+# GPU Optimizations
+if torch.cuda.is_available():
+    torch.backends.cudnn.benchmark = True  # Enable cuDNN auto-tuner for optimal convolution algorithms
+    torch.backends.cuda.matmul.allow_tf32 = True  # Enable TF32 for faster matmul on Ampere+ GPUs
+    torch.backends.cudnn.allow_tf32 = True
+
 app = Flask(__name__)
 
 # Global model instance
@@ -88,10 +94,13 @@ def load_model(model_path):
             
     print(f"Loading model: {model_path}")
     try:
+        # Disable gradient computation globally for inference
+        torch.set_grad_enabled(False)
+        
         # Load with Flash Attention 2 if available
         model_kwargs = {
             "device_map": "cuda:0" if torch.cuda.is_available() else "cpu",
-            "dtype": torch.bfloat16 if torch.cuda.is_available() else torch.float32,
+            "dtype": torch.float16 if torch.cuda.is_available() else torch.float32,  # Use float16 for speed
         }
         
         # Try to use Flash Attention 2
@@ -104,6 +113,7 @@ def load_model(model_path):
 
         model = Qwen3TTSModel.from_pretrained(
             model_path,
+            low_cpu_mem_usage=True,
             **model_kwargs
         )
         
@@ -118,6 +128,30 @@ def load_model(model_path):
             model_type = 'Base'
         else:
             model_type = 'CustomVoice'  # Default
+        
+        # Note: torch.compile is not compatible with Qwen3TTSModel wrapper class
+        # However, we still get significant speedup from:
+        # - GPU optimizations (cuDNN benchmark, TF32)
+        # - KV-cache (use_cache=True)
+        # - torch.inference_mode()
+        # - Optimized generation parameters
+        # - Flash Attention 2 (if available)
+        
+        # Warmup generation to optimize CUDA kernels
+        if torch.cuda.is_available() and model_type == 'CustomVoice':
+            try:
+                print("🔥 Running warmup generation...")
+                with torch.inference_mode():
+                    _ = model.generate_custom_voice(
+                        text="Warmup",
+                        language="English",
+                        speaker="Ryan",
+                        max_new_tokens=50,
+                        use_cache=True
+                    )
+                print("✅ Warmup complete")
+            except Exception as e:
+                print(f"⚠️ Warmup failed: {e}")
         
         print(f"Model loaded successfully: {model_name} (Type: {model_type})")
     except Exception as e:
@@ -184,7 +218,7 @@ def get_languages():
     return jsonify(SUPPORTED_LANGUAGES)
 
 DEFAULT_GEN_KWARGS = dict(
-    max_new_tokens=2048,
+    max_new_tokens=2048,  # Keep original for quality
     do_sample=True,
     top_k=50,
     top_p=1.0,
@@ -194,6 +228,7 @@ DEFAULT_GEN_KWARGS = dict(
     subtalker_top_k=50,
     subtalker_top_p=1.0,
     subtalker_temperature=0.9,
+    use_cache=True,  # Enable KV-cache for faster generation
 )
 
 @app.route('/api/generate', methods=['POST'])
@@ -225,64 +260,66 @@ def generate_audio():
         
         start_time = time.time()
         
-        if model_type == 'VoiceDesign':
-            # VoiceDesign model uses instruct for voice description
-            if not instruct:
-                return jsonify({"error": "VoiceDesign model requires a voice description in the 'Style Instruction' field"}), 400
-            
-            wavs, sr = model.generate_voice_design(
-                text=text,
-                language=language,
-                instruct=instruct,
-                **gen_kwargs
-            )
-        elif model_type == 'CustomVoice':
-            # CustomVoice model uses speaker selection
-            wavs, sr = model.generate_custom_voice(
-                text=text,
-                language=language,
-                speaker=speaker,
-                instruct=instruct if instruct else None,
-                **gen_kwargs
-            )
-        elif model_type == 'Base':
-            # Base model - Voice Cloning
-            ref_audio_path = data.get('ref_audio_path')
-            ref_text = data.get('ref_text')
-            
-            # Use 'xvec_only' if user requests it OR if ref_text is missing
-            # This allows cloning even if the user didn't transcribe the audio
-            x_vector_only_mode = data.get('x_vector_only', False)
-            if not ref_text:
-                x_vector_only_mode = True
-            
-            if not ref_audio_path:
-                return jsonify({"error": "Base model requires 'ref_audio_path' for voice cloning"}), 400
+        # Use inference_mode for better performance (disables gradient computation)
+        with torch.inference_mode():
+            if model_type == 'VoiceDesign':
+                # VoiceDesign model uses instruct for voice description
+                if not instruct:
+                    return jsonify({"error": "VoiceDesign model requires a voice description in the 'Style Instruction' field"}), 400
                 
-            # Check if ref_audio_path is a stored file or needs full path
-            if not os.path.isabs(ref_audio_path):
-                # Check in storage dir if it's a filename
-                possible_path = STORAGE_DIR / ref_audio_path
-                if possible_path.exists():
-                    ref_audio_path = str(possible_path)
-            
-            print(f"Cloning voice from: {ref_audio_path} (X-Vector Mode: {x_vector_only_mode})")
-            
-            # Create prompt - caches features for better performance
-            prompt_items = model.create_voice_clone_prompt(
-                ref_audio=ref_audio_path,
-                ref_text=ref_text if not x_vector_only_mode else None,
-                x_vector_only_mode=x_vector_only_mode
-            )
-            
-            wavs, sr = model.generate_voice_clone(
-                text=text,
-                language=language,
-                voice_clone_prompt=prompt_items,
-                **gen_kwargs
-            )
-        else:
-            return jsonify({"error": f"Unknown model type: {model_type}"}), 500
+                wavs, sr = model.generate_voice_design(
+                    text=text,
+                    language=language,
+                    instruct=instruct,
+                    **gen_kwargs
+                )
+            elif model_type == 'CustomVoice':
+                # CustomVoice model uses speaker selection
+                wavs, sr = model.generate_custom_voice(
+                    text=text,
+                    language=language,
+                    speaker=speaker,
+                    instruct=instruct if instruct else None,
+                    **gen_kwargs
+                )
+            elif model_type == 'Base':
+                # Base model - Voice Cloning
+                ref_audio_path = data.get('ref_audio_path')
+                ref_text = data.get('ref_text')
+                
+                # Use 'xvec_only' if user requests it OR if ref_text is missing
+                # This allows cloning even if the user didn't transcribe the audio
+                x_vector_only_mode = data.get('x_vector_only', False)
+                if not ref_text:
+                    x_vector_only_mode = True
+                
+                if not ref_audio_path:
+                    return jsonify({"error": "Base model requires 'ref_audio_path' for voice cloning"}), 400
+                    
+                # Check if ref_audio_path is a stored file or needs full path
+                if not os.path.isabs(ref_audio_path):
+                    # Check in storage dir if it's a filename
+                    possible_path = STORAGE_DIR / ref_audio_path
+                    if possible_path.exists():
+                        ref_audio_path = str(possible_path)
+                
+                print(f"Cloning voice from: {ref_audio_path} (X-Vector Mode: {x_vector_only_mode})")
+                
+                # Create prompt - caches features for better performance
+                prompt_items = model.create_voice_clone_prompt(
+                    ref_audio=ref_audio_path,
+                    ref_text=ref_text if not x_vector_only_mode else None,
+                    x_vector_only_mode=x_vector_only_mode
+                )
+                
+                wavs, sr = model.generate_voice_clone(
+                    text=text,
+                    language=language,
+                    voice_clone_prompt=prompt_items,
+                    **gen_kwargs
+                )
+            else:
+                return jsonify({"error": f"Unknown model type: {model_type}"}), 500
         
         end_time = time.time()
         elapsed_time = end_time - start_time
