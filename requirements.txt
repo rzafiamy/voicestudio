@@ -5,5 +5,14 @@ transformers
 accelerate
 qwen-tts
 huggingface_hub[cli]
-flask
-triton  # For torch.compile optimizations
+triton
+# FastAPI stack
+fastapi
+uvicorn[standard]
+python-multipart
+jinja2
+# Auth
+python-jose[cryptography]
+bcrypt
+# Config
+python-dotenv

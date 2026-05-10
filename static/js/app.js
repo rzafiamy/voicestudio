@@ -1,6 +1,16 @@
 // API Base URL
 const API_BASE = '';
 
+// Fetch wrapper — redirects to /login on 401
+async function apiFetch(url, options = {}) {
+    const res = await fetch(url, options);
+    if (res.status === 401) {
+        window.location.href = '/login';
+        return null;
+    }
+    return res;
+}
+
 // Global state
 let voices = {};
 let currentAudio = null;
@@ -29,7 +39,8 @@ document.addEventListener('DOMContentLoaded', () => {
 // VRAM Monitoring
 async function updateVRAMStatus() {
     try {
-        const response = await fetch(`${API_BASE}/api/vram`);
+        const response = await apiFetch(`${API_BASE}/api/vram`);
+        if (!response) return;
         const data = await response.json();
         
         const monitor = document.getElementById('vramMonitor');
@@ -176,6 +187,15 @@ function setupEventListeners() {
         };
     }
 
+    // Logout
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.onclick = async () => {
+            await fetch('/logout', { method: 'POST' });
+            window.location.href = '/login';
+        };
+    }
+
     // Modal close listeners
     document.getElementById('modalCancel').onclick = () => hideModal('confirmModal');
     document.getElementById('modalConfirm').onclick = () => {
@@ -208,7 +228,7 @@ function toggleDropdown(id, force) {
 // Load voices from API
 async function loadVoices() {
     try {
-        const response = await fetch(`${API_BASE}/api/voices`);
+        const response = await apiFetch(`${API_BASE}/api/voices`);
         voices = await response.json();
 
         const speakerSelect = document.getElementById('speaker');
@@ -286,7 +306,7 @@ function selectVoice(speaker) {
 // Load languages from API
 async function loadLanguages() {
     try {
-        const response = await fetch(`${API_BASE}/api/languages`);
+        const response = await apiFetch(`${API_BASE}/api/languages`);
         const languages = await response.json();
 
         const languageSelect = document.getElementById('language');
@@ -312,7 +332,7 @@ async function loadLanguages() {
 // Load models from API
 async function loadModels() {
     try {
-        const response = await fetch(`${API_BASE}/api/models`);
+        const response = await apiFetch(`${API_BASE}/api/models`);
         const data = await response.json();
 
         const modelSelect = document.getElementById('model');
@@ -431,7 +451,7 @@ async function handleModelSwitch(e) {
     });
 
     try {
-        const response = await fetch(`${API_BASE}/api/switch_model`, {
+        const response = await apiFetch(`${API_BASE}/api/switch_model`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ model: newModel })
@@ -511,7 +531,7 @@ async function handleGenerate(e) {
     showLoading();
 
     try {
-        const response = await fetch(`${API_BASE}/api/generate`, {
+        const response = await apiFetch(`${API_BASE}/api/generate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(formData)
@@ -772,7 +792,7 @@ function showSuccess(message) {
 // History Handling
 async function loadHistory() {
     try {
-        const response = await fetch(`${API_BASE}/api/history`);
+        const response = await apiFetch(`${API_BASE}/api/history`);
         historyData = await response.json();
         renderHistory(historyData);
     } catch (error) {
@@ -863,7 +883,7 @@ async function handleFileUpload(e) {
     formData.append('file', file);
 
     try {
-        const response = await fetch(`${API_BASE}/api/upload_audio`, {
+        const response = await apiFetch(`${API_BASE}/api/upload_audio`, {
             method: 'POST',
             body: formData
         });
