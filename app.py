@@ -86,22 +86,34 @@ def load_model(model_path):
     # Unload existing model if present to free VRAM
     if model is not None:
         print(f"Unloading previous model: {model_name}")
+        try:
+            # Move to CPU first to help torch release CUDA handles
+            if hasattr(model, 'to'):
+                model.to('cpu')
+        except:
+            pass
         del model
         model = None
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+            torch.cuda.synchronize() # Wait for all asynchronous CUDA operations to finish
+            time.sleep(0.5) # Give the driver a moment to settle
             
     model_path = model_path.rstrip('/')
     print(f"Loading model: {model_path}")
     try:
+        # Ensure we are on the correct device
+        if torch.cuda.is_available():
+            torch.cuda.set_device(0)
+            
         # Disable gradient computation globally for inference
         torch.set_grad_enabled(False)
         
         # Load with Flash Attention 2 if available
         model_kwargs = {
-            "device_map": "cuda:0" if torch.cuda.is_available() else "cpu",
-            "dtype": torch.float16 if torch.cuda.is_available() else torch.float32,  # Use float16 for speed
+            "device_map": "auto", # Let accelerate handle the placement optimally
+            "dtype": torch.float16 if torch.cuda.is_available() else torch.float32,
         }
         
         # Try to use Flash Attention 2
@@ -130,33 +142,28 @@ def load_model(model_path):
         else:
             model_type = 'CustomVoice'  # Default
         
-        # Note: torch.compile is not compatible with Qwen3TTSModel wrapper class
-        # However, we still get significant speedup from:
-        # - GPU optimizations (cuDNN benchmark, TF32)
-        # - KV-cache (use_cache=True)
-        # - torch.inference_mode()
-        # - Optimized generation parameters
-        # - Flash Attention 2 (if available)
-        
         # Warmup generation to optimize CUDA kernels
         if torch.cuda.is_available() and model_type == 'CustomVoice':
             try:
                 print("🔥 Running warmup generation...")
+                # Use inference_mode and be very conservative with tokens
                 with torch.inference_mode():
+                    # Check if speaker exists in the newly loaded model if possible
+                    # but since we don't have easy access to the list yet, we'll just try
                     _ = model.generate_custom_voice(
                         text="Warmup",
                         language="English",
                         speaker="Ryan",
-                        max_new_tokens=50,
+                        max_new_tokens=20, # Minimal tokens for warmup
                         use_cache=True
                     )
                 print("✅ Warmup complete")
             except Exception as e:
-                print(f"⚠️ Warmup failed: {e}")
+                print(f"⚠️ Warmup failed (non-critical): {e}")
         
         print(f"Model loaded successfully: {model_name} (Type: {model_type})")
     except Exception as e:
-        print(f"Failed to load model: {str(e)}")
+        print(f"CRITICAL: Failed to load model: {str(e)}")
         # If loading fails, ensure we clean up
         if model is not None:
             del model
@@ -164,6 +171,7 @@ def load_model(model_path):
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+            torch.cuda.synchronize()
         raise e
 
 @app.route('/')

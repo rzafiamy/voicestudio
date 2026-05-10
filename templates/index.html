@@ -29,15 +29,20 @@
         </div>
 
         <nav class="sidebar-nav">
-            <div class="nav-section-title">Generation History</div>
+            <div class="sidebar-search">
+                <i data-lucide="search"></i>
+                <input type="text" id="historySearch" placeholder="Search history...">
+            </div>
+            <div class="nav-section-title">History</div>
             <div id="historyList" class="history-list">
                 <!-- History items injected here -->
-                <p class="empty-state" style="padding: 1rem; color: var(--text-dim); font-size: 0.85rem;">No generations yet</p>
+                <p class="empty-state" style="padding: 1rem; color: var(--text-dim); font-size: 0.75rem; text-align: center; opacity: 0.6;">No productions yet</p>
             </div>
         </nav>
 
-        <div style="padding: 1.5rem; border-top: 1px solid var(--border-main);">
-             <p style="font-size: 0.75rem; color: var(--text-dim);">v3.0.0 Pro Studio</p>
+        <div style="padding: 1.5rem; margin-top: auto; border-top: 1px solid var(--border-main); display: flex; align-items: center; justify-content: space-between;">
+             <p style="font-size: 0.7rem; color: var(--text-dim); font-weight: 500; letter-spacing: 0.05em;">MAKIX v3.0</p>
+             <div class="status-dot" style="width: 6px; height: 6px; background: #10b981;"></div>
         </div>
     </aside>
 
@@ -51,12 +56,7 @@
                 </div>
             </div>
             
-            <div class="header-center">
-                <div class="search-container">
-                    <i data-lucide="search" class="search-icon"></i>
-                    <input type="text" id="historySearch" placeholder="Search sessions...">
-                </div>
-            </div>
+
 
             <div class="top-actions">
                 <div class="custom-select-container" id="modelSelectContainer">

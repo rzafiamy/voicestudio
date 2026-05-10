@@ -18,6 +18,35 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
 });
 
+// Helper for friendly model names
+function getFriendlyModelInfo(technicalName) {
+    let name = technicalName.split('/').pop(); // Default
+    let feature = "Advanced TTS Generation";
+    let icon = "cpu";
+    let typeClass = "model";
+
+    if (technicalName.includes('CustomVoice')) {
+        const isPro = technicalName.includes('1.7B');
+        name = isPro ? "Studio Pro" : "Studio Turbo";
+        feature = isPro ? "Max fidelity, high-end presets" : "Fast generation, curated voices";
+        icon = "music";
+        typeClass = "voice";
+    } else if (technicalName.includes('VoiceDesign')) {
+        name = "Voice Designer";
+        feature = "Generate unique voices from text";
+        icon = "wand-2";
+        typeClass = "voice";
+    } else if (technicalName.includes('Base')) {
+        const isPro = technicalName.includes('1.7B');
+        name = isPro ? "Clone Pro" : "Clone Turbo";
+        feature = isPro ? "Professional cloning (High fidelity)" : "Fast cloning from reference";
+        icon = "copy";
+        typeClass = "cloning";
+    }
+
+    return { name, feature, icon, typeClass };
+}
+
 // Setup event listeners
 function setupEventListeners() {
     const form = document.getElementById('generateForm');
@@ -213,12 +242,12 @@ async function loadModels() {
         modelOptions.innerHTML = '';
 
         data.models.forEach(model => {
-            const shortName = model.split('/').pop();
+            const info = getFriendlyModelInfo(model);
             
             // Update hidden select
             const option = document.createElement('option');
             option.value = model;
-            option.textContent = shortName;
+            option.textContent = info.name;
             modelSelect.appendChild(option);
             
             // Create beautiful option
@@ -227,18 +256,18 @@ async function loadModels() {
             opt.dataset.value = model;
             opt.innerHTML = `
                 <div class="option-icon">
-                    <i data-lucide="cpu"></i>
+                    <i data-lucide="${info.icon}"></i>
                 </div>
                 <div class="option-info">
-                    <div class="option-label">${shortName}</div>
-                    <div class="option-sublabel">Qwen-TTS Architecture</div>
+                    <div class="option-label">${info.name}</div>
+                    <div class="option-sublabel">${info.feature}</div>
                 </div>
             `;
             
             if (model === data.current) {
                 option.selected = true;
                 opt.classList.add('selected');
-                if (modelValue) modelValue.textContent = shortName;
+                if (modelValue) modelValue.textContent = info.name;
             }
 
             opt.onclick = (e) => {
@@ -309,8 +338,8 @@ async function handleModelSwitch(e) {
     
     // Update UI immediately
     const modelValue = document.getElementById('modelValue');
-    const shortName = newModel.split('/').pop();
-    if (modelValue) modelValue.textContent = shortName;
+    const info = getFriendlyModelInfo(newModel);
+    if (modelValue) modelValue.textContent = info.name;
     
     document.querySelectorAll('#modelOptions .custom-select-option').forEach(opt => {
         opt.classList.toggle('selected', opt.dataset.value === newModel);
@@ -333,7 +362,7 @@ async function handleModelSwitch(e) {
         
         // Update display name in header badge if it exists
         const display = document.getElementById('currentModelDisplay');
-        if (display) display.textContent = shortName;
+        if (display) display.textContent = info.name;
         
         updateUIForModelType();
         hideLoading();
@@ -532,18 +561,29 @@ function createHistoryItem(item) {
     const div = document.createElement('div');
     div.className = 'history-item';
     
-    // Add active state if it's the current playing audio (optional)
+    // Determine badges
+    const modelInfo = getFriendlyModelInfo(item.model || '');
+    let modelBadgeHTML = `<div class="badge-mini model"><i data-lucide="${modelInfo.icon}"></i> <span>${modelInfo.name}</span></div>`;
     
+    let speakerBadgeHTML = '';
+    if (item.speaker) {
+        speakerBadgeHTML = `<div class="badge-mini voice"><i data-lucide="mic-2"></i> <span>${item.speaker}</span></div>`;
+    } else if (item.model_type === 'Base') {
+        speakerBadgeHTML = `<div class="badge-mini cloning"><i data-lucide="copy"></i> <span>Cloned</span></div>`;
+    } else if (item.model_type === 'VoiceDesign') {
+        speakerBadgeHTML = `<div class="badge-mini voice"><i data-lucide="wand-2"></i> <span>Designed</span></div>`;
+    }
+
     div.innerHTML = `
-        <div class="history-item-icon">
-            <i data-lucide="music"></i>
-        </div>
         <div class="history-item-content">
             <div class="history-item-header">
-                <span>${item.speaker || (item.model_type === 'Base' ? 'Clone' : 'Design')}</span>
-                <span>${formatTimeOnly(item.timestamp)}</span>
+                <span class="history-item-time">${formatTimeOnly(item.timestamp)}</span>
             </div>
             <div class="history-item-text">${item.text}</div>
+            <div class="history-item-badges">
+                ${modelBadgeHTML}
+                ${speakerBadgeHTML}
+            </div>
         </div>
     `;
     
@@ -560,7 +600,7 @@ function createHistoryItem(item) {
         document.querySelectorAll('.history-item').forEach(i => i.classList.remove('active'));
         div.classList.add('active');
         
-        // Load into editor? (Maybe optional)
+        // Load into editor
         document.getElementById('text').value = item.text;
         updateCharCount();
     };
