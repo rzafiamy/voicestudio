@@ -28,6 +28,7 @@ function getFriendlyModelInfo(technicalName) {
     let feature = "Advanced TTS Generation";
     let icon = "cpu";
     let typeClass = "model";
+    let cssClass = "default";
 
     if (technicalName.includes('CustomVoice')) {
         const isPro = technicalName.includes('1.7B');
@@ -35,21 +36,25 @@ function getFriendlyModelInfo(technicalName) {
         feature = isPro ? "Max fidelity, high-end presets" : "Fast generation, curated voices";
         icon = "music";
         typeClass = "voice";
+        cssClass = isPro ? "studio-pro" : "studio-turbo";
     } else if (technicalName.includes('VoiceDesign')) {
         name = "Voice Designer";
         feature = "Generate unique voices from text";
         icon = "wand-2";
         typeClass = "voice";
+        cssClass = "voice-designer";
     } else if (technicalName.includes('Base')) {
         const isPro = technicalName.includes('1.7B');
         name = isPro ? "Clone Pro" : "Clone Turbo";
         feature = isPro ? "Professional cloning (High fidelity)" : "Fast cloning from reference";
         icon = "copy";
         typeClass = "cloning";
+        cssClass = isPro ? "clone-pro" : "clone-turbo";
     }
 
-    return { name, feature, icon, typeClass };
+    return { name, feature, icon, typeClass, cssClass };
 }
+
 
 // Setup event listeners
 function setupEventListeners() {
@@ -752,28 +757,23 @@ function createHistoryItem(item) {
     const div = document.createElement('div');
     div.className = 'history-item';
     
-    // Determine badges
-    const modelInfo = getFriendlyModelInfo(item.model || '');
-    let modelBadgeHTML = `<div class="badge-mini model"><i data-lucide="${modelInfo.icon}"></i> <span>${modelInfo.name}</span></div>`;
-    
-    let speakerBadgeHTML = '';
-    if (item.speaker) {
-        speakerBadgeHTML = `<div class="badge-mini voice"><i data-lucide="mic-2"></i> <span>${item.speaker}</span></div>`;
-    } else if (item.model_type === 'Base') {
-        speakerBadgeHTML = `<div class="badge-mini cloning"><i data-lucide="copy"></i> <span>Cloned</span></div>`;
-    } else if (item.model_type === 'VoiceDesign') {
-        speakerBadgeHTML = `<div class="badge-mini voice"><i data-lucide="wand-2"></i> <span>Designed</span></div>`;
-    }
+    const info = getFriendlyModelInfo(item.model || '');
 
     div.innerHTML = `
-        <div class="history-item-content">
+        <div class="item-app-icon ${info.cssClass}">
+            <i data-lucide="${info.icon}"></i>
+        </div>
+        <div class="history-item-body">
             <div class="history-item-header">
+                <span class="history-item-model">${info.name}</span>
                 <span class="history-item-time">${formatTimeOnly(item.timestamp)}</span>
             </div>
             <div class="history-item-text">${item.text}</div>
-            <div class="history-item-badges">
-                ${modelBadgeHTML}
-                ${speakerBadgeHTML}
+            <div class="history-item-footer">
+                <div class="history-item-voice">
+                    <i data-lucide="mic-2"></i>
+                    <span>${item.speaker || (item.model_type === 'Base' ? 'Reference' : 'AI Generated')}</span>
+                </div>
             </div>
         </div>
     `;
