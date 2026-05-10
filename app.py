@@ -116,7 +116,7 @@ def load_model(model_path):
         # Load with Flash Attention 2 if available
         model_kwargs = {
             "device_map": "auto", # Let accelerate handle the placement optimally
-            "dtype": torch.float16 if torch.cuda.is_available() else torch.float32,
+            "dtype": torch.bfloat16 if torch.cuda.is_available() else torch.float32,
         }
         
         # Try to use Flash Attention 2 (requires both the package and CUDA)
