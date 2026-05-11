@@ -649,6 +649,7 @@ function updateUIForModelType() {
     const speakerGroup = document.getElementById('speakerGroup');
     const instructGroup = document.getElementById('instructGroup');
     const instructInput = document.getElementById('instruct');
+    const generateBtn = document.getElementById('generateBtn');
     
     // Base model cloning groups
     const refAudioGroup = document.getElementById('refAudioGroup');
@@ -660,19 +661,33 @@ function updateUIForModelType() {
     if (refAudioGroup) refAudioGroup.style.display = 'none';
     if (refTextGroup) refTextGroup.style.display = 'none';
 
+    let btnText = "GENERATE";
+    let btnIcon = "play";
+
     if (modelType === 'VoiceDesign') {
         if (speakerGroup) speakerGroup.style.display = 'none';
         instructInput.placeholder = 'Describe voice (e.g. "Male, deep, calm")';
         instructInput.required = true;
+        btnText = "DESIGN";
+        btnIcon = "wand-2";
     } else if (modelType === 'CustomVoice') {
         instructInput.placeholder = 'Style (e.g. "Happy", "Sad")';
         instructInput.required = false;
+        btnText = "GENERATE";
+        btnIcon = "play";
     } else if (modelType === 'Base') {
         if (speakerGroup) speakerGroup.style.display = 'none';
         if (instructGroup) instructGroup.style.display = 'none';
         if (refAudioGroup) refAudioGroup.style.display = 'flex';
         if (refTextGroup) refTextGroup.style.display = 'flex';
         instructInput.required = false;
+        btnText = "CLONE";
+        btnIcon = "copy";
+    }
+
+    if (generateBtn) {
+        generateBtn.innerHTML = `<i data-lucide="${btnIcon}"></i> <span>${btnText}</span>`;
+        if (window.lucide) lucide.createIcons();
     }
 }
 
@@ -947,6 +962,10 @@ async function switchToViewMode(item, updateUrl = true) {
     if (form) form.style.display = 'none';
     if (view) view.style.display = 'flex';
 
+    // Hide produce button in view mode
+    const studioActionArea = document.getElementById('studioActionArea');
+    if (studioActionArea) studioActionArea.style.display = 'none';
+
     // Ensure actions menu is closed
     const actionsMenu = document.getElementById('viewActionsMenu');
     if (actionsMenu) actionsMenu.classList.remove('show');
@@ -1072,6 +1091,10 @@ function switchToEditMode(item = null, updateUrl = true) {
 
     if (form) form.style.display = 'block';
     if (view) view.style.display = 'none';
+
+    // Show produce button in studio mode
+    const studioActionArea = document.getElementById('studioActionArea');
+    if (studioActionArea) studioActionArea.style.display = 'flex';
 
     // Highlight Studio button
     document.getElementById('studioBtn').classList.add('active');

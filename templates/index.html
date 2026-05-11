@@ -80,10 +80,7 @@
     <main class="main-wrapper">
         <header class="top-bar">
             <div class="header-left">
-                <div class="model-badge">
-                    <div class="status-dot"></div>
-                    <span id="currentModelDisplay">Loading Model...</span>
-                </div>
+                <!-- Removed redundant model badge -->
             </div>
 
             <div class="header-center">
@@ -133,6 +130,13 @@
                             <div class="storage-bar-fill" id="storageFill" style="width: 0%"></div>
                         </div>
                     </div>
+                </div>
+
+                <div class="action-area" id="studioActionArea" style="margin-left: 1.5rem;">
+                    <button type="submit" class="btn-produce" id="generateBtn" form="generateForm">
+                        <i data-lucide="play"></i>
+                        <span>PRODUCE AUDIO</span>
+                    </button>
                 </div>
             </div>
         </header>
@@ -230,12 +234,7 @@
                     </div>
                 </div>
 
-                <div class="action-area">
-                    <button type="submit" class="btn-produce" id="generateBtn">
-                        <i data-lucide="play"></i>
-                        PRODUCE AUDIO
-                    </button>
-                </div>
+
             </form>
 
             <!-- View Mode: Session Details -->
