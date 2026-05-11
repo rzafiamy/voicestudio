@@ -659,7 +659,7 @@ async function switchToViewMode(item) {
         viewText.textContent = item.text;
     }
     
-    document.getElementById('viewTimestamp').textContent = formatTimestamp(item.timestamp);
+    document.getElementById('viewTimestamp').textContent = `${formatTimestamp(item.timestamp)} (${formatRelativeTime(item.timestamp)})`;
     document.getElementById('viewDuration').textContent = item.elapsed_time ? `${item.elapsed_time.toFixed(2)}s` : 'N/A';
     document.getElementById('viewWordCount').textContent = countWords(item.text);
     document.getElementById('viewEfficiency').textContent = item.chars_per_sec ? `${item.chars_per_sec.toFixed(1)} ch/s` : 'N/A';
@@ -781,7 +781,7 @@ function showAudioPlayer(result) {
     const metrics = document.getElementById('playerMetrics');
 
     audio.src = `${API_BASE}/api/audio/${result.filename}`;
-    timestamp.textContent = formatTimestamp(result.timestamp);
+    timestamp.textContent = `${formatTimestamp(result.timestamp)} (${formatRelativeTime(result.timestamp)})`;
 
     if (result.elapsed_time) {
         metrics.textContent = `${result.elapsed_time.toFixed(2)}s | ${result.chars_per_sec.toFixed(1)} ch/s`;
@@ -862,7 +862,7 @@ function createHistoryItem(item) {
         <div class="history-item-body">
             <div class="history-item-header">
                 <span class="history-item-model">${info.name}</span>
-                <span class="history-item-time">${formatTimeOnly(item.timestamp)}</span>
+                <span class="history-item-time">${formatRelativeTime(item.timestamp)}</span>
             </div>
             <div class="history-item-text">${item.text}</div>
             <div class="history-item-footer">
@@ -892,6 +892,65 @@ function formatTimestamp(ts) {
 
 function formatTimeOnly(ts) {
     return `${ts.substring(9,11)}:${ts.substring(11,13)}`;
+}
+
+function parseTimestamp(ts) {
+    // Expected format: YYYYMMDD_HHMMSS[_...]
+    const year = parseInt(ts.substring(0, 4));
+    const month = parseInt(ts.substring(4, 6)) - 1; // 0-indexed
+    const day = parseInt(ts.substring(6, 8));
+    const hour = parseInt(ts.substring(9, 11));
+    const minute = parseInt(ts.substring(11, 13));
+    const second = parseInt(ts.substring(13, 15)) || 0;
+    return new Date(year, month, day, hour, minute, second);
+}
+
+function formatRelativeTime(ts) {
+    if (!ts) return 'Unknown time';
+    
+    const date = parseTimestamp(ts);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+
+    // Future dates (possible if clock drift)
+    if (diffInSeconds < 0) return 'Just now';
+
+    if (diffInSeconds < 60) return 'Just now';
+    
+    if (diffInSeconds < 3600) {
+        const minutes = Math.floor(diffInSeconds / 60);
+        return `${minutes} min ago`;
+    }
+    
+    if (diffInSeconds < 86400) {
+        const hours = Math.floor(diffInSeconds / 3600);
+        return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    }
+    
+    // Yesterday check
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (date.toDateString() === yesterday.toDateString()) {
+        return 'Yesterday';
+    }
+
+    if (diffInSeconds < 604800) { // < 1 week
+        const days = Math.floor(diffInSeconds / 86400);
+        return `${days} day${days > 1 ? 's' : ''} ago`;
+    }
+
+    if (diffInSeconds < 2592000) { // < 30 days
+        const weeks = Math.floor(diffInSeconds / 604800);
+        return `${weeks} week${weeks > 1 ? 's' : ''} ago`;
+    }
+    
+    if (diffInSeconds < 31536000) { // < 1 year
+        const months = Math.floor(diffInSeconds / 2592000);
+        return `${months} month${months > 1 ? 's' : ''} ago`;
+    }
+
+    const years = Math.floor(diffInSeconds / 31536000);
+    return `${years} year${years > 1 ? 's' : ''} ago`;
 }
 
 async function handleFileUpload(e) {
