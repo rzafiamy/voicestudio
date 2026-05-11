@@ -9,5 +9,5 @@ venv/
 Qwen3-TTS-*/
 *.whl
 .env
-podcasts/.torch_compile_cache/
+podcasts/
 .torch_compile_cache/
