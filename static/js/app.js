@@ -982,7 +982,7 @@ async function switchToViewMode(item, updateUrl = true) {
     }
 
     // Set title based on content snippet
-    const snippet = item.text.length > 30 ? item.text.substring(0, 30) + '...' : item.text;
+    const snippet = item.text.length > 60 ? item.text.substring(0, 60) + '...' : item.text;
     document.getElementById('viewTitle').textContent = snippet || 'Studio Session';
 
     // Initialize/Refresh Wavesurfer

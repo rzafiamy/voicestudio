@@ -1503,24 +1503,54 @@ textarea#text::placeholder {
 .view-header-compact {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    padding-bottom: 0.75rem;
+    align-items: center; /* Change from flex-start to center for better alignment */
+    padding-bottom: 0.6rem;
     border-bottom: 1px solid var(--border-main);
 }
 
 .view-header-compact .view-title-group h2 {
-    font-size: 1.25rem;
-    margin-bottom: 0.25rem;
+    font-size: 1.1rem;
+    margin-bottom: 0.15rem;
     color: var(--text-main);
+    letter-spacing: -0.01em;
 }
 
 .view-header-compact .view-meta-row {
+    display: flex;
+    align-items: center;
     gap: 0.75rem;
 }
 
+.view-header-compact .view-subtitle {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+}
+
+.view-header-compact .meta-divider {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    opacity: 0.4;
+}
+
 .view-header-compact .meta-tag {
-    padding: 0.15rem 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.2rem 0.6rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-main);
+    border-radius: 6px;
+    color: var(--text-muted);
     font-size: 0.7rem;
+    font-weight: 500;
+}
+
+.view-header-compact .meta-tag i {
+    width: 12px;
+    height: 12px;
+    color: var(--accent-primary);
 }
 
 /* Dropdown Menu */
