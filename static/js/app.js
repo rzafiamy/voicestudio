@@ -19,6 +19,7 @@ let historyData = [];           // Store history for searching
 let synthesisTimerInterval = null;
 let synthesisStartTime = 0;
 let wavesurfer = null;         // Wavesurfer instance
+let floatingWavesurfer = null; // Floating player Wavesurfer instance
 let currentViewItem = null;    // Track currently viewed history item
 let modelStatusInterval = null;
 
@@ -32,6 +33,10 @@ function stopAllAudio() {
         floatingAudio.pause();
     }
     
+    if (floatingWavesurfer && floatingWavesurfer.isPlaying()) {
+        floatingWavesurfer.pause();
+    }
+
     // Stop wavesurfer
     if (wavesurfer && wavesurfer.isPlaying()) {
         wavesurfer.pause();
@@ -1286,21 +1291,75 @@ function showAudioPlayer(result) {
     const audio = document.getElementById('audioElement');
     const timestamp = document.getElementById('playerTimestamp');
     const metrics = document.getElementById('playerMetrics');
+    const audioUrl = `${API_BASE}/api/audio/${result.filename}`;
 
-    audio.src = `${API_BASE}/api/audio/${result.filename}`;
-    timestamp.textContent = `${formatTimestamp(result.timestamp)} (${formatRelativeTime(result.timestamp)})`;
+    audio.src = audioUrl;
+    timestamp.textContent = formatRelativeTime(result.timestamp);
 
     if (result.elapsed_time) {
         metrics.textContent = `${result.elapsed_time.toFixed(2)}s | ${result.chars_per_sec.toFixed(1)} ch/s`;
     }
 
-    player.classList.add('visible');
-    audio.play().catch(err => console.log('Autoplay prevented'));
+    // Initialize/Refresh Floating Wavesurfer
+    if (floatingWavesurfer) {
+        floatingWavesurfer.destroy();
+    }
+
+    const plugins = [];
+
+    floatingWavesurfer = WaveSurfer.create({
+        container: '#floatingWaveform',
+        backgroundColor: 'transparent',
+        waveColor: '#4f46e5',
+        progressColor: '#8b5cf6',
+        cursorColor: '#8b5cf6',
+        barWidth: 2,
+        barGap: 2,
+        barRadius: 3,
+        height: 44,
+        normalize: true,
+        url: audioUrl,
+        plugins: plugins
+    });
+
+    const playBtn = document.getElementById('floatingPlayPauseBtn');
+    const playIcon = document.getElementById('floatingPlayIcon');
+    const waveTime = document.getElementById('floatingWaveTime');
+
+    playBtn.onclick = () => floatingWavesurfer.playPause();
+
+    floatingWavesurfer.on('play', () => {
+        if (playIcon) {
+            playIcon.setAttribute('data-lucide', 'pause');
+            lucide.createIcons();
+        }
+    });
+
+    floatingWavesurfer.on('pause', () => {
+        if (playIcon) {
+            playIcon.setAttribute('data-lucide', 'play');
+            lucide.createIcons();
+        }
+    });
+
+    floatingWavesurfer.on('audioprocess', () => {
+        const currentTime = formatTime(floatingWavesurfer.getCurrentTime());
+        const duration = formatTime(floatingWavesurfer.getDuration());
+        waveTime.textContent = `${currentTime} / ${duration}`;
+    });
+
+    floatingWavesurfer.on('ready', () => {
+        const duration = formatTime(floatingWavesurfer.getDuration());
+        waveTime.textContent = `00:00 / ${duration}`;
+        player.classList.add('visible');
+        floatingWavesurfer.play().catch(err => console.log('Autoplay prevented'));
+    });
 
     // Handle download button for the latest production
     const downloadLatestBtn = document.getElementById('downloadLatestBtn');
     if (downloadLatestBtn) {
-        downloadLatestBtn.onclick = () => {
+        downloadLatestBtn.onclick = (e) => {
+            e.stopPropagation();
             downloadAudio(result.filename, `production_${result.timestamp}.wav`);
         };
     }
@@ -1310,6 +1369,11 @@ function closeAudioPlayer() {
     const player = document.getElementById('audioPlayer');
     const audio = document.getElementById('audioElement');
     if (player) player.classList.remove('visible');
+    if (floatingWavesurfer) {
+        floatingWavesurfer.pause();
+        floatingWavesurfer.destroy();
+        floatingWavesurfer = null;
+    }
     if (audio) {
         audio.pause();
         audio.src = '';

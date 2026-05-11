@@ -860,49 +860,112 @@ textarea#text::placeholder {
     transform: none;
 }
 
-/* Audio Player */
+/* Advanced Floating Player */
 .floating-player {
     position: fixed;
-    bottom: 2rem;
-    left: calc(var(--sidebar-width) + 2rem);
-    right: 2rem;
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px);
-    border: 1px solid var(--glass-border);
+    bottom: 1.5rem;
+    left: calc(var(--sidebar-width) + 1.5rem);
+    right: 1.5rem;
+    background: rgba(15, 15, 20, 0.7);
+    backdrop-filter: blur(30px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 20px;
-    padding: 1.5rem 2rem;
-    display: flex;
-    align-items: center;
-    gap: 2rem;
-    box-shadow: var(--shadow-premium);
-    transform: translateY(120%);
-    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-    z-index: 100;
+    padding: 0.75rem 1.25rem;
+    box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.6);
+    transform: translateY(150%);
+    transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 1000;
+    overflow: hidden;
 }
 
 .floating-player.visible {
     transform: translateY(0);
 }
 
+.player-main-content {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    width: 100%;
+}
+
+.player-left-group {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-width: 220px;
+}
+
 .player-meta {
-    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
 .player-title {
-    font-size: 1rem;
+    font-size: 0.85rem;
     font-weight: 600;
-    margin-bottom: 0.25rem;
+    color: var(--text-main);
+    white-space: nowrap;
 }
 
 .player-subtitle {
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     color: var(--text-dim);
+    font-family: 'Inter', sans-serif;
 }
 
-audio {
-    height: 40px;
-    filter: invert(100%) hue-rotate(180deg) brightness(1.5);
+.player-center-group {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    min-width: 0;
 }
+
+.visualizer-container {
+    flex: 1;
+    position: relative;
+    height: 44px;
+    background: transparent !important;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    color-scheme: dark !important;
+}
+
+.visualizer-container canvas {
+    filter: none !important;
+    background: transparent !important;
+}
+
+.floating-waveform {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+}
+
+.player-right-group {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.player-timestamp-compact {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    text-align: right;
+    line-height: 1.2;
+    max-width: 100px;
+}
+
+.player-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 
 /* Loading States */
 .loading-overlay {
