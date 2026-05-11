@@ -300,7 +300,23 @@ function setupEventListeners() {
     window.onclick = () => {
         toggleDropdown('speakerOptions', false);
         toggleDropdown('modelOptions', false);
+        
+        // Close view actions menu if clicked outside
+        const viewActionsMenu = document.getElementById('viewActionsMenu');
+        if (viewActionsMenu && viewActionsMenu.classList.contains('show')) {
+            viewActionsMenu.classList.remove('show');
+        }
     };
+
+    // View Actions Dropdown Trigger
+    const viewActionsBtn = document.getElementById('viewActionsBtn');
+    if (viewActionsBtn) {
+        viewActionsBtn.onclick = (e) => {
+            e.stopPropagation();
+            const menu = document.getElementById('viewActionsMenu');
+            if (menu) menu.classList.toggle('show');
+        };
+    }
 
     // Edit in studio button
     const editBtn = document.getElementById('editInStudioBtn');
@@ -926,6 +942,10 @@ async function switchToViewMode(item, updateUrl = true) {
     if (form) form.style.display = 'none';
     if (view) view.style.display = 'flex';
 
+    // Ensure actions menu is closed
+    const actionsMenu = document.getElementById('viewActionsMenu');
+    if (actionsMenu) actionsMenu.classList.remove('show');
+
     // Populate View with Markdown support
     const viewText = document.getElementById('viewText');
     if (window.marked) {
@@ -979,7 +999,7 @@ function initWavesurfer(audioUrl) {
         barWidth: 2,
         barRadius: 3,
         responsive: true,
-        height: 80,
+        height: 40,
         normalize: true,
         url: audioUrl
     });
