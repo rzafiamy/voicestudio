@@ -97,24 +97,23 @@ function getFriendlyModelInfo(technicalName) {
 
     if (technicalName.includes('CustomVoice')) {
         const isPro = technicalName.includes('1.7B');
-        name = isPro ? "Studio Pro" : "Studio Turbo";
+        name = isPro ? "Pro Speech" : "Fast Speech";
         feature = isPro ? "Max fidelity, high-end presets" : "Fast generation, curated voices";
         icon = "music";
         typeClass = "voice";
         cssClass = isPro ? "studio-pro" : "studio-turbo";
     } else if (technicalName.includes('VoiceDesign')) {
-        name = "Voice Designer";
+        name = "Voice Design";
         feature = "Generate unique voices from text";
         icon = "wand-2";
         typeClass = "voice";
         cssClass = "voice-designer";
     } else if (technicalName.includes('Base')) {
-        const isPro = technicalName.includes('1.7B');
-        name = isPro ? "Clone Pro" : "Clone Turbo";
-        feature = isPro ? "Professional cloning (High fidelity)" : "Fast cloning from reference";
+        name = "Voice Clone";
+        feature = "Clone any voice from a reference audio";
         icon = "copy";
         typeClass = "cloning";
-        cssClass = isPro ? "clone-pro" : "clone-turbo";
+        cssClass = "clone-pro";
     }
 
     return { name, feature, icon, typeClass, cssClass };
@@ -358,15 +357,22 @@ async function loadModels() {
         modelSelect.innerHTML = '';
         modelOptions.innerHTML = '';
 
+        const modelOrder = ['0.6B-CustomVoice', '1.7B-CustomVoice', '1.7B-Base', '1.7B-VoiceDesign'];
+        data.models.sort((a, b) => {
+            const ai = modelOrder.findIndex(k => a.includes(k));
+            const bi = modelOrder.findIndex(k => b.includes(k));
+            return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+        });
+
         data.models.forEach(model => {
             const info = getFriendlyModelInfo(model);
-            
+
             // Update hidden select
             const option = document.createElement('option');
             option.value = model;
             option.textContent = info.name;
             modelSelect.appendChild(option);
-            
+
             // Create beautiful option
             const opt = document.createElement('div');
             opt.className = 'custom-select-option';
@@ -380,11 +386,13 @@ async function loadModels() {
                     <div class="option-sublabel">${info.feature}</div>
                 </div>
             `;
-            
+
             if (model === data.current) {
                 option.selected = true;
                 opt.classList.add('selected');
                 if (modelValue) modelValue.textContent = info.name;
+                const display = document.getElementById('currentModelDisplay');
+                if (display) display.textContent = info.name;
             }
 
             opt.onclick = (e) => {
@@ -487,7 +495,7 @@ async function handleModelSwitch(e) {
         updateWorkbenchVisibility();
         updateVRAMStatus(); // Update VRAM immediately after switch
         hideLoading();
-        showSuccess(`Active Model: ${result.type}`);
+        showSuccess(`Active Model: ${info.name}`);
 
     } catch (error) {
         console.error('Error switching model:', error);
