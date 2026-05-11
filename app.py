@@ -2,9 +2,14 @@ import argparse
 import gc
 import json
 import os
+import re
 import time
+import unicodedata
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+from bs4 import BeautifulSoup
+from markdown_it import MarkdownIt
 
 import soundfile as sf
 import torch
@@ -29,6 +34,7 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin")
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8000"))
 DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "./Qwen3-TTS-12Hz-1.7B-CustomVoice")
+MAX_NEW_TOKENS = int(os.getenv("MAX_NEW_TOKENS", "2048"))
 
 # ── GPU optimisations ────────────────────────────────────────────────────────
 if torch.cuda.is_available():
@@ -94,7 +100,7 @@ SUPPORTED_LANGUAGES = [
 ]
 
 DEFAULT_GEN_KWARGS = dict(
-    max_new_tokens=2048,
+    max_new_tokens=MAX_NEW_TOKENS,
     do_sample=True,
     top_k=50,
     top_p=1.0,
@@ -213,6 +219,85 @@ class SwitchModelRequest(BaseModel):
     model: str
 
 
+_md = MarkdownIt().enable("strikethrough")
+
+
+def _strip_markdown(text: str) -> str:
+    """Convert markdown to plain text via HTML render → BeautifulSoup strip."""
+    html = _md.render(text)
+    soup = BeautifulSoup(html, "html.parser")
+    # Replace <br> / block tags with newlines before stripping tags
+    for tag in soup.find_all(["br", "p", "li", "h1", "h2", "h3", "h4", "h5", "h6",
+                               "blockquote", "pre", "code", "tr", "td", "th"]):
+        tag.insert_before("\n")
+    return soup.get_text(separator=" ")
+
+
+_CHAR_REPLACEMENTS = {
+    # Typographic quotes → straight quotes
+    "‘": "'", "’": "'", "“": '"', "”": '"',
+    # Dashes
+    "–": "-", "—": "-", "―": "-",
+    # Ellipsis
+    "…": "...",
+    # Bullet / list markers
+    "•": ",", "‣": ",", "⁃": ",",
+    # Non-breaking / zero-width spaces
+    " ": " ", "​": "", "‌": "", "‍": "", "﻿": "",
+    # Fraction slash, middle dot
+    "⁄": "/", "·": ".",
+    # Currency symbols → words (extend as needed)
+    "$": " dollars ", "€": " euros ", "£": " pounds ", "¥": " yen ",
+    "%": " percent ",
+    # Math symbols
+    "+": " plus ", "=": " equals ",
+    "&": " and ",
+}
+
+_KEEP_PUNCTUATION = set(".,!?;:-'\"()")
+
+
+def preprocess_text(text: str) -> str:
+    """Normalize text before passing it to TTS to avoid unknown tokens."""
+    # 0. Convert markdown to plain text (removes #, *, _, `, >, ~, links, etc.)
+    text = _strip_markdown(text)
+
+    # 1. Strip leading/trailing whitespace
+    text = text.strip()
+
+    # 2. Apply explicit character replacements first
+    for src, dst in _CHAR_REPLACEMENTS.items():
+        text = text.replace(src, dst)
+
+    # 3. Normalize unicode (NFC) so composed forms are consistent
+    text = unicodedata.normalize("NFC", text)
+
+    # 4. Drop remaining non-ASCII / control characters that are not
+    #    standard punctuation or letters
+    cleaned = []
+    for ch in text:
+        cat = unicodedata.category(ch)
+        if ch.isascii():
+            cleaned.append(ch)
+        elif cat.startswith("L"):   # Letter (any script)
+            cleaned.append(ch)
+        elif cat.startswith("N"):   # Number
+            cleaned.append(ch)
+        elif cat.startswith("P"):   # Punctuation
+            cleaned.append(ch)
+        elif cat.startswith("Z"):   # Separator → space
+            cleaned.append(" ")
+        # Everything else (symbols, control chars, surrogates) is dropped
+    text = "".join(cleaned)
+
+    # 5. Collapse multiple consecutive spaces / blank lines
+    text = re.sub(r" {2,}", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+
+    # 6. Final strip
+    return text.strip()
+
+
 class GenerateRequest(BaseModel):
     text: str
     language: str = "Auto"
@@ -274,6 +359,11 @@ async def index(request: Request, user: str = Depends(get_current_user)):
     return templates.TemplateResponse(request, "index.html")
 
 
+@app.get("/help", response_class=HTMLResponse)
+async def help_page(request: Request, user: str = Depends(get_current_user)):
+    return templates.TemplateResponse(request, "help.html")
+
+
 # ── API routes (all protected) ────────────────────────────────────────────────
 @app.get("/api/vram")
 async def get_vram_status(user: str = Depends(get_current_user)):
@@ -331,6 +421,10 @@ async def generate_audio(data: GenerateRequest, user: str = Depends(get_current_
         raise HTTPException(status_code=400, detail="Text is required")
     if model is None:
         raise HTTPException(status_code=500, detail="Model not loaded")
+
+    data.text = preprocess_text(data.text)
+    if not data.text:
+        raise HTTPException(status_code=400, detail="Text is empty after preprocessing")
 
     gen_kwargs = DEFAULT_GEN_KWARGS.copy()
     for k, v in data.kwargs.items():

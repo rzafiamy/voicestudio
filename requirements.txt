@@ -16,3 +16,6 @@ python-jose[cryptography]
 bcrypt
 # Config
 python-dotenv
+# Text preprocessing
+beautifulsoup4
+markdown-it-py

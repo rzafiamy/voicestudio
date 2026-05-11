@@ -25,6 +25,10 @@ let currentViewItem = null;    // Track currently viewed history item
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize sidebar state immediately to prevent flicker
+    if (localStorage.getItem('sidebarCollapsed') === 'true') {
+        document.body.classList.add('sidebar-collapsed');
+    }
     loadVoices();
     loadLanguages();
     loadModels();
@@ -194,6 +198,16 @@ function setupEventListeners() {
             await fetch('/logout', { method: 'POST' });
             window.location.href = '/login';
         };
+    }
+
+    // Sidebar Toggle Logic
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', () => {
+            document.body.classList.toggle('sidebar-collapsed');
+            const isCollapsed = document.body.classList.contains('sidebar-collapsed');
+            localStorage.setItem('sidebarCollapsed', isCollapsed);
+        });
     }
 
     // Modal close listeners

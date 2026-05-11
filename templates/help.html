@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Makix Studio | Help & Documentation</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { overflow: auto; }
+
+        .help-wrapper {
+            display: flex;
+            min-height: 100vh;
+            width: 100%;
+        }
+
+        .help-sidebar {
+            width: 260px;
+            flex-shrink: 0;
+            background: var(--bg-side);
+            border-right: 1px solid var(--border-main);
+            padding: 2rem 1.5rem;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .help-sidebar .logo-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 2rem;
+        }
+
+        .help-nav-title {
+            font-size: 0.65rem;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            padding: 0.75rem 0 0.25rem;
+        }
+
+        .help-nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: background 0.15s, color 0.15s;
+        }
+
+        .help-nav-link:hover, .help-nav-link.active {
+            background: rgba(139, 92, 246, 0.12);
+            color: var(--text-main);
+        }
+
+        .help-nav-link i { width: 15px; height: 15px; flex-shrink: 0; }
+
+        .back-link {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            text-decoration: none;
+            margin-top: auto;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-main);
+            transition: color 0.15s;
+        }
+        .back-link:hover { color: var(--accent-primary); }
+
+        /* Main content */
+        .help-content {
+            flex: 1;
+            padding: 3rem 4rem;
+            max-width: 860px;
+        }
+
+        .help-content h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .help-content .subtitle {
+            color: var(--text-muted);
+            font-size: 1rem;
+            margin-bottom: 3rem;
+        }
+
+        /* Section */
+        .help-section {
+            margin-bottom: 3.5rem;
+            scroll-margin-top: 2rem;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-main);
+        }
+
+        .section-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: rgba(139, 92, 246, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .section-icon i { width: 18px; height: 18px; color: var(--accent-primary); }
+
+        .section-header h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .help-content p {
+            color: var(--text-muted);
+            line-height: 1.75;
+            margin-bottom: 1rem;
+            font-size: 0.925rem;
+        }
+
+        .help-content strong { color: var(--text-main); font-weight: 600; }
+
+        /* Model cards */
+        .model-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1.25rem;
+        }
+
+        .model-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-main);
+            border-radius: 12px;
+            padding: 1.25rem;
+            transition: border-color 0.2s;
+        }
+
+        .model-card:hover { border-color: var(--border-hover); }
+
+        .model-card-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .model-badge-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .model-badge-icon i { width: 16px; height: 16px; }
+
+        .model-card h3 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 0.15rem;
+        }
+
+        .model-tag {
+            font-size: 0.65rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .tag-custom { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
+        .tag-design { background: rgba(6, 182, 212, 0.2); color: #22d3ee; }
+        .tag-base   { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .tag-small  { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+
+        .model-card p {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        .model-card .use-when {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border-main);
+            font-size: 0.78rem;
+            color: var(--text-dim);
+        }
+
+        .model-card .use-when strong { color: var(--text-muted); }
+
+        /* Context table */
+        .context-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1.25rem;
+            font-size: 0.875rem;
+        }
+
+        .context-table th {
+            text-align: left;
+            padding: 0.6rem 1rem;
+            background: var(--bg-card);
+            color: var(--text-dim);
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border-main);
+        }
+
+        .context-table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-main);
+            color: var(--text-muted);
+            vertical-align: top;
+        }
+
+        .context-table tr:last-child td { border-bottom: none; }
+        .context-table tr:hover td { background: rgba(255,255,255,0.02); }
+        .context-table td:first-child { color: var(--text-main); font-weight: 500; }
+
+        /* Callout boxes */
+        .callout {
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            margin: 1rem 0;
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-start;
+        }
+
+        .callout i { width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px; }
+        .callout p { margin: 0; font-size: 0.875rem; }
+
+        .callout-info  { background: rgba(6, 182, 212, 0.08);  border: 1px solid rgba(6, 182, 212, 0.2);  }
+        .callout-info i { color: #22d3ee; }
+        .callout-warn  { background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); }
+        .callout-warn i { color: #fbbf24; }
+        .callout-tip   { background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.2); }
+        .callout-tip i { color: #a78bfa; }
+
+        /* Code / env block */
+        .env-block {
+            background: #0d0d10;
+            border: 1px solid var(--border-main);
+            border-radius: 10px;
+            padding: 1.25rem 1.5rem;
+            margin: 1rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.82rem;
+            line-height: 2;
+            overflow-x: auto;
+        }
+
+        .env-comment { color: #52525b; }
+        .env-key     { color: #a78bfa; }
+        .env-value   { color: #34d399; }
+        .env-equals  { color: var(--text-dim); }
+
+        /* Steps */
+        .step-list {
+            list-style: none;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .step-list li {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .step-num {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: rgba(139, 92, 246, 0.2);
+            color: #a78bfa;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .step-list li p { margin: 0; }
+
+        /* Token math visual */
+        .token-math {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin: 1rem 0;
+        }
+
+        .math-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-main);
+            border-radius: 8px;
+            padding: 0.6rem 1rem;
+            font-size: 0.82rem;
+            text-align: center;
+        }
+
+        .math-box .val { font-size: 1.1rem; font-weight: 700; color: var(--text-main); }
+        .math-box .lbl { font-size: 0.65rem; color: var(--text-dim); margin-top: 2px; }
+        .math-arrow { color: var(--text-dim); font-size: 1.2rem; }
+    </style>
+</head>
+<body>
+<div class="help-wrapper">
+
+    <!-- Sidebar nav -->
+    <aside class="help-sidebar">
+        <div class="logo-row">
+            <div class="logo-icon" style="width:36px;height:36px;flex-shrink:0;">
+                <i data-lucide="waves"></i>
+            </div>
+            <span style="font-weight:700;font-size:1rem;">Makix Studio</span>
+        </div>
+
+        <span class="help-nav-title">On this page</span>
+        <a href="#models"   class="help-nav-link"><i data-lucide="cpu"></i> Models explained</a>
+        <a href="#context"  class="help-nav-link"><i data-lucide="layers"></i> Context & character limits</a>
+        <a href="#tokens"   class="help-nav-link"><i data-lucide="hash"></i> What are tokens?</a>
+        <a href="#config"   class="help-nav-link"><i data-lucide="settings"></i> Configuration (.env)</a>
+        <a href="#tips"     class="help-nav-link"><i data-lucide="lightbulb"></i> Tips & best practices</a>
+
+        <a href="/" class="back-link"><i data-lucide="arrow-left" style="width:14px;height:14px;"></i> Back to Studio</a>
+    </aside>
+
+    <!-- Main content -->
+    <div class="help-content">
+        <h1>Help &amp; Documentation</h1>
+        <p class="subtitle">Everything you need to know about Makix Studio, the available models, and how to get the best results.</p>
+
+        <!-- ── MODELS ───────────────────────────────────────────────── -->
+        <section class="help-section" id="models">
+            <div class="section-header">
+                <div class="section-icon"><i data-lucide="cpu"></i></div>
+                <h2>Models — which one should I use?</h2>
+            </div>
+
+            <p>Makix Studio uses <strong>Qwen3-TTS</strong> models from Alibaba. There are four models installed, each designed for a specific use case. They all run at <strong>12 Hz codec rate</strong> (the speed at which audio is reconstructed).</p>
+
+            <div class="model-grid">
+
+                <div class="model-card">
+                    <div class="model-card-header">
+                        <div class="model-badge-icon" style="background:rgba(139,92,246,0.15);">
+                            <i data-lucide="mic-2" style="color:#a78bfa;"></i>
+                        </div>
+                        <div>
+                            <h3>1.7B-CustomVoice</h3>
+                            <span class="model-tag tag-custom">Recommended</span>
+                        </div>
+                    </div>
+                    <p>The <strong>best all-around model</strong>. It has a built-in library of high-quality preset voices (Ryan, Ethan, Chelsie, etc.) that you can use immediately — no reference audio needed.</p>
+                    <div class="use-when"><strong>Use when:</strong> you want great quality with no setup. Perfect for content creation, demos, podcasts, and most everyday use.</div>
+                </div>
+
+                <div class="model-card">
+                    <div class="model-card-header">
+                        <div class="model-badge-icon" style="background:rgba(6,182,212,0.15);">
+                            <i data-lucide="sliders" style="color:#22d3ee;"></i>
+                        </div>
+                        <div>
+                            <h3>1.7B-VoiceDesign</h3>
+                            <span class="model-tag tag-design">Creative</span>
+                        </div>
+                    </div>
+                    <p>Design a <strong>custom voice from a text description</strong>. You describe the voice you want ("young British female, soft and calm") and the model creates it on the fly.</p>
+                    <div class="use-when"><strong>Use when:</strong> you need a unique voice that matches a character or brand, and you don't have a real voice sample to clone from.</div>
+                </div>
+
+                <div class="model-card">
+                    <div class="model-card-header">
+                        <div class="model-badge-icon" style="background:rgba(16,185,129,0.15);">
+                            <i data-lucide="copy" style="color:#34d399;"></i>
+                        </div>
+                        <div>
+                            <h3>1.7B-Base</h3>
+                            <span class="model-tag tag-base">Voice Clone</span>
+                        </div>
+                    </div>
+                    <p>Upload a <strong>reference audio clip</strong> of any voice, and the model clones it. Optionally provide a transcription of the clip to improve accuracy.</p>
+                    <div class="use-when"><strong>Use when:</strong> you need to reproduce a specific real person's voice, or recreate a voice from an audio sample you already have.</div>
+                </div>
+
+                <div class="model-card">
+                    <div class="model-card-header">
+                        <div class="model-badge-icon" style="background:rgba(245,158,11,0.15);">
+                            <i data-lucide="zap" style="color:#fbbf24;"></i>
+                        </div>
+                        <div>
+                            <h3>0.6B-CustomVoice</h3>
+                            <span class="model-tag tag-small">Lightweight</span>
+                        </div>
+                    </div>
+                    <p>A <strong>smaller, faster version</strong> of the CustomVoice model. Same preset voices, but uses about 3× less VRAM and generates audio significantly faster.</p>
+                    <div class="use-when"><strong>Use when:</strong> you have limited GPU memory, you need fast generation, or you're doing quick tests and don't need maximum quality.</div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ── CONTEXT & CHARACTER LIMITS ──────────────────────────── -->
+        <section class="help-section" id="context">
+            <div class="section-header">
+                <div class="section-icon"><i data-lucide="layers"></i></div>
+                <h2>Context size &amp; character limits</h2>
+            </div>
+
+            <p>Every model has a <strong>maximum amount of audio it can generate in a single run</strong>. This is measured in <em>tokens</em> — not characters. The table below shows the limits for each model and what that means in practical terms.</p>
+
+            <table class="context-table">
+                <thead>
+                    <tr>
+                        <th>Model</th>
+                        <th>Max tokens (model)</th>
+                        <th>App limit (MAX_NEW_TOKENS)</th>
+                        <th>~Audio duration</th>
+                        <th>~Characters</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>0.6B-CustomVoice</td>
+                        <td>8,192</td>
+                        <td>configurable</td>
+                        <td>up to ~11:22 min (at 8192)</td>
+                        <td>up to ~7,400</td>
+                    </tr>
+                    <tr>
+                        <td>1.7B-Base</td>
+                        <td>8,192</td>
+                        <td>configurable</td>
+                        <td>up to ~11:22 min (at 8192)</td>
+                        <td>up to ~7,400</td>
+                    </tr>
+                    <tr>
+                        <td>1.7B-CustomVoice</td>
+                        <td>8,192</td>
+                        <td>configurable</td>
+                        <td>up to ~11:22 min (at 8192)</td>
+                        <td>up to ~7,400</td>
+                    </tr>
+                    <tr>
+                        <td>1.7B-VoiceDesign</td>
+                        <td>8,192</td>
+                        <td>configurable</td>
+                        <td>up to ~11:22 min (at 8192)</td>
+                        <td>up to ~7,400</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="callout callout-info" style="margin-top:1.25rem;">
+                <i data-lucide="info"></i>
+                <p>The <strong>app default is 2,048 tokens</strong> — about <strong>2 min 50 sec</strong> of audio (~1,800 characters). This is well below the model maximum of 8,192. You can raise it in <code>.env</code> to allow longer outputs.</p>
+            </div>
+
+            <p>Character counts are approximate because speech rate varies: fast speakers cover more characters per second than slow, deliberate ones. Languages also differ — Chinese/Japanese are more compact per character than English.</p>
+        </section>
+
+        <!-- ── TOKENS ───────────────────────────────────────────────── -->
+        <section class="help-section" id="tokens">
+            <div class="section-header">
+                <div class="section-icon"><i data-lucide="hash"></i></div>
+                <h2>What are tokens, and how do they relate to characters?</h2>
+            </div>
+
+            <p>When the model generates audio, it doesn't produce raw audio samples directly. It produces <strong>audio tokens</strong> — small discrete units that a codec then converts into actual sound. This is similar to how language models produce word-piece tokens, which are then assembled into text.</p>
+
+            <p>Here's the chain from text to audio:</p>
+
+            <div class="token-math">
+                <div class="math-box">
+                    <div class="val">Text</div>
+                    <div class="lbl">your script</div>
+                </div>
+                <div class="math-arrow">→</div>
+                <div class="math-box">
+                    <div class="val">Text tokens</div>
+                    <div class="lbl">fed as input</div>
+                </div>
+                <div class="math-arrow">→</div>
+                <div class="math-box">
+                    <div class="val">Audio tokens</div>
+                    <div class="lbl">model generates these (MAX_NEW_TOKENS)</div>
+                </div>
+                <div class="math-arrow">→</div>
+                <div class="math-box">
+                    <div class="val">WAV audio</div>
+                    <div class="lbl">decoded at 12 Hz</div>
+                </div>
+            </div>
+
+            <p>At <strong>12 Hz codec rate</strong>, the model generates roughly <strong>150 audio tokens per second of speech</strong>. So:</p>
+
+            <table class="context-table">
+                <thead>
+                    <tr>
+                        <th>MAX_NEW_TOKENS</th>
+                        <th>~Audio duration</th>
+                        <th>~English characters</th>
+                        <th>VRAM / speed impact</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>2,048</strong> (default)</td>
+                        <td>~2:50 min</td>
+                        <td>~1,800 chars</td>
+                        <td>Lowest — fast</td>
+                    </tr>
+                    <tr>
+                        <td><strong>4,096</strong></td>
+                        <td>~5:41 min</td>
+                        <td>~3,700 chars</td>
+                        <td>Moderate</td>
+                    </tr>
+                    <tr>
+                        <td><strong>6,144</strong></td>
+                        <td>~8:32 min</td>
+                        <td>~5,500 chars</td>
+                        <td>Higher</td>
+                    </tr>
+                    <tr>
+                        <td><strong>8,192</strong> (max)</td>
+                        <td>~11:22 min</td>
+                        <td>~7,400 chars</td>
+                        <td>Highest — slow on low VRAM</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="callout callout-info">
+                <i data-lucide="info"></i>
+                <p>For <strong>longer content</strong> (articles, audiobooks), split your text into paragraphs and generate each one separately. This gives you more control over pacing and avoids hitting token limits.</p>
+            </div>
+        </section>
+
+        <!-- ── CONFIGURATION ────────────────────────────────────────── -->
+        <section class="help-section" id="config">
+            <div class="section-header">
+                <div class="section-icon"><i data-lucide="settings"></i></div>
+                <h2>Configuration via .env</h2>
+            </div>
+
+            <p>All runtime settings are controlled by a <strong>.env file</strong> in the root directory of the app. Edit this file and restart the server to apply changes. No code edits needed.</p>
+
+            <div class="env-block">
+<span class="env-comment"># ── Server ──────────────────────────────────────</span><br>
+<span class="env-key">HOST</span><span class="env-equals">=</span><span class="env-value">0.0.0.0</span>             <span class="env-comment"># IP to bind (0.0.0.0 = all interfaces)</span><br>
+<span class="env-key">PORT</span><span class="env-equals">=</span><span class="env-value">8000</span>             <span class="env-comment"># HTTP port</span><br>
+<br>
+<span class="env-comment"># ── Security ─────────────────────────────────────</span><br>
+<span class="env-key">SECRET_KEY</span><span class="env-equals">=</span><span class="env-value">change-me</span>       <span class="env-comment"># JWT signing key — change in production!</span><br>
+<span class="env-key">ACCESS_TOKEN_EXPIRE_MINUTES</span><span class="env-equals">=</span><span class="env-value">480</span> <span class="env-comment"># Session lifetime (480 = 8 hours)</span><br>
+<span class="env-key">ADMIN_USERNAME</span><span class="env-equals">=</span><span class="env-value">admin</span><br>
+<span class="env-key">ADMIN_PASSWORD</span><span class="env-equals">=</span><span class="env-value">admin</span>       <span class="env-comment"># Change this!</span><br>
+<br>
+<span class="env-comment"># ── Model ────────────────────────────────────────</span><br>
+<span class="env-key">DEFAULT_MODEL</span><span class="env-equals">=</span><span class="env-value">./Qwen3-TTS-12Hz-1.7B-CustomVoice</span>  <span class="env-comment"># Loaded on startup</span><br>
+<br>
+<span class="env-comment"># ── Generation limits ────────────────────────────</span><br>
+<span class="env-key">MAX_NEW_TOKENS</span><span class="env-equals">=</span><span class="env-value">2048</span>         <span class="env-comment"># Audio tokens per generation run</span><br>
+<span class="env-comment">#                              2048 = ~2:50 min / ~1800 chars  (default)</span><br>
+<span class="env-comment">#                              4096 = ~5:41 min / ~3700 chars</span><br>
+<span class="env-comment">#                              8192 = ~11:22 min / ~7400 chars  (model max)</span>
+            </div>
+
+            <ul class="step-list">
+                <li>
+                    <div class="step-num">1</div>
+                    <p>Open the <strong>.env</strong> file in a text editor.</p>
+                </li>
+                <li>
+                    <div class="step-num">2</div>
+                    <p>Change <strong>MAX_NEW_TOKENS</strong> to your desired value (e.g. <code>4096</code> for ~400 character scripts).</p>
+                </li>
+                <li>
+                    <div class="step-num">3</div>
+                    <p>Save the file and <strong>restart the server</strong> (<code>python app.py</code> or your service manager). The new value takes effect immediately on startup.</p>
+                </li>
+            </ul>
+
+            <div class="callout callout-warn">
+                <i data-lucide="alert-triangle"></i>
+                <p>Don't exceed <strong>8,192</strong> — that is the hard model limit. The generation will either error or silently truncate.</p>
+            </div>
+        </section>
+
+        <!-- ── TIPS ─────────────────────────────────────────────────── -->
+        <section class="help-section" id="tips">
+            <div class="section-header">
+                <div class="section-icon"><i data-lucide="lightbulb"></i></div>
+                <h2>Tips &amp; best practices</h2>
+            </div>
+
+            <div class="callout callout-tip">
+                <i data-lucide="scissors"></i>
+                <p><strong>Split long texts into paragraphs.</strong> Instead of one massive generation, break your script at natural pause points. Each chunk generates faster, and you can re-generate individual parts without re-processing the whole script.</p>
+            </div>
+
+            <div class="callout callout-tip">
+                <i data-lucide="mic"></i>
+                <p><strong>Voice cloning quality depends on your reference audio.</strong> For the Base model, use a clean, noise-free clip of 5–15 seconds. Background music or noise will degrade the clone quality significantly.</p>
+            </div>
+
+            <div class="callout callout-tip">
+                <i data-lucide="sliders"></i>
+                <p><strong>Use Style Instructions creatively.</strong> With CustomVoice, the "Style Instruction" field lets you steer delivery — try values like <em>"excited and fast"</em>, <em>"slow and calm"</em>, or <em>"whispering"</em>.</p>
+            </div>
+
+            <div class="callout callout-tip">
+                <i data-lucide="zap"></i>
+                <p><strong>Low VRAM? Use the 0.6B model.</strong> It produces comparable quality to the 1.7B for short texts but uses significantly less GPU memory and generates audio faster.</p>
+            </div>
+
+            <div class="callout callout-info">
+                <i data-lucide="globe"></i>
+                <p><strong>Language selection matters.</strong> Always match the language selector to the language of your text. Setting it to "Auto" works but is less reliable — explicit selection improves pronunciation accuracy.</p>
+            </div>
+        </section>
+
+    </div>
+</div>
+
+<script>
+    lucide.createIcons();
+
+    // Highlight active nav link based on scroll position
+    const sections = document.querySelectorAll('.help-section');
+    const navLinks = document.querySelectorAll('.help-nav-link');
+    const content  = document.querySelector('.help-content');
+
+    content.addEventListener('scroll', () => {
+        let current = '';
+        sections.forEach(s => {
+            if (content.scrollTop >= s.offsetTop - 80) current = s.id;
+        });
+        navLinks.forEach(l => {
+            l.classList.toggle('active', l.getAttribute('href') === '#' + current);
+        });
+    });
+</script>
+</body>
+</html>

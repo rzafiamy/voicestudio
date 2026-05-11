@@ -20,6 +20,9 @@
 <body>
     <!-- Sidebar: Library & Navigation -->
     <aside class="sidebar">
+        <button id="sidebarToggle" class="btn-sidebar-toggle" title="Toggle Sidebar">
+            <i data-lucide="chevron-left"></i>
+        </button>
         <div class="sidebar-header">
             <div class="logo-icon">
                 <i data-lucide="waves"></i>
@@ -30,7 +33,7 @@
         <div style="padding: 0 1rem 1rem;">
             <button id="newSessionBtn" class="btn-new-session">
                 <i data-lucide="plus"></i>
-                NEW SESSION
+                <span>NEW SESSION</span>
             </button>
         </div>
 
@@ -46,10 +49,13 @@
             </div>
         </nav>
 
-        <div style="padding: 1.5rem; margin-top: auto; border-top: 1px solid var(--border-main); display: flex; align-items: center; justify-content: space-between;">
+        <div class="sidebar-footer" style="padding: 1.5rem; margin-top: auto; border-top: 1px solid var(--border-main); display: flex; align-items: center; justify-content: space-between;">
              <p style="font-size: 0.7rem; color: var(--text-dim); font-weight: 500; letter-spacing: 0.05em;">MAKIX v3.0</p>
              <div style="display: flex; align-items: center; gap: 0.75rem;">
                  <div class="status-dot" style="width: 6px; height: 6px; background: #10b981;"></div>
+                 <a href="/help" title="Help & Documentation" style="background: transparent; border: none; cursor: pointer; color: var(--text-dim); display: flex; align-items: center; padding: 0; text-decoration: none;">
+                     <i data-lucide="help-circle" style="width: 14px; height: 14px;"></i>
+                 </a>
                  <button id="logoutBtn" title="Sign out" style="background: transparent; border: none; cursor: pointer; color: var(--text-dim); display: flex; align-items: center; padding: 0;">
                      <i data-lucide="log-out" style="width: 14px; height: 14px;"></i>
                  </button>

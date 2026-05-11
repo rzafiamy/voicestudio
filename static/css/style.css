@@ -26,6 +26,11 @@
 
     /* Layout */
     --sidebar-width: 320px;
+    --sidebar-collapsed-width: 80px;
+}
+
+body.sidebar-collapsed {
+    --sidebar-width: var(--sidebar-collapsed-width);
 }
 
 * {
@@ -60,6 +65,8 @@ h3 {
     flex-direction: column;
     height: 100%;
     z-index: 10;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
 }
 
 .sidebar-header {
@@ -68,6 +75,98 @@ h3 {
     align-items: center;
     gap: 0.75rem;
     margin-bottom: 0.5rem;
+    position: relative;
+    overflow: hidden;
+    min-height: 70px;
+}
+
+.btn-sidebar-toggle {
+    position: absolute;
+    right: -14px;
+    top: 32px;
+    width: 28px;
+    height: 28px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-main);
+    border-radius: 50%;
+    color: var(--text-dim);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.btn-sidebar-toggle:hover {
+    color: var(--text-main);
+    border-color: var(--accent-primary);
+    transform: scale(1.1);
+}
+
+.btn-sidebar-toggle i {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.sidebar-collapsed .btn-sidebar-toggle i {
+    transform: rotate(180deg);
+}
+
+body.sidebar-collapsed .logo-text,
+body.sidebar-collapsed .btn-new-session span,
+body.sidebar-collapsed .sidebar-search input,
+body.sidebar-collapsed .nav-section-title,
+body.sidebar-collapsed .history-item-body,
+body.sidebar-collapsed .sidebar-footer p,
+body.sidebar-collapsed .sidebar-footer div > p {
+    display: none !important;
+}
+
+body.sidebar-collapsed .logo-icon {
+    flex-shrink: 0;
+}
+
+body.sidebar-collapsed .sidebar-header {
+    gap: 0;
+}
+
+body.sidebar-collapsed .btn-new-session {
+    padding: 0.85rem 0;
+    justify-content: center;
+}
+
+body.sidebar-collapsed .sidebar-search {
+    margin: 0.5rem 0 0;
+    display: flex;
+    justify-content: center;
+}
+
+body.sidebar-collapsed .sidebar-search i {
+    position: static;
+    transform: none;
+}
+
+body.sidebar-collapsed .history-item {
+    justify-content: center;
+    padding: 0.85rem 0;
+    margin: 0 0.5rem;
+    gap: 0;
+}
+
+body.sidebar-collapsed .history-item::after {
+    left: -0.5rem;
+}
+
+body.sidebar-collapsed .sidebar-footer {
+    padding: 1.5rem 0 !important;
+    justify-content: center !important;
+}
+
+body.sidebar-collapsed .sidebar-footer div {
+    gap: 0 !important;
 }
 
 .logo-icon {
