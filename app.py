@@ -46,6 +46,9 @@ if torch.cuda.is_available():
     torch.backends.cudnn.benchmark = True
     torch.backends.cuda.matmul.allow_tf32 = True
     torch.backends.cudnn.allow_tf32 = True
+    torch.set_float32_matmul_precision('high')
+    import torch._dynamo
+    torch._dynamo.config.cache_size_limit = 512
 
 # ── Auth helpers ─────────────────────────────────────────────────────────────
 HASHED_ADMIN_PASSWORD = bcrypt.hashpw(ADMIN_PASSWORD.encode(), bcrypt.gensalt())
@@ -210,17 +213,26 @@ def load_model(model_path: str):
 
         if USE_COMPILE:
             try:
-                print("🚀 Compiling non-autoregressive sub-models...")
-                # We compile parts that are not used in an autoregressive loop first
-                # These provide safe and consistent speedups.
+                print("🚀 Compiling sub-models...")
+                # Non-autoregressive sub-models
                 if hasattr(model.model, "speaker_encoder") and model.model.speaker_encoder:
                     model.model.speaker_encoder = torch.compile(model.model.speaker_encoder, mode="reduce-overhead")
                 
                 if hasattr(model.model, "speech_tokenizer") and model.model.speech_tokenizer:
                     model.model.speech_tokenizer.model = torch.compile(model.model.speech_tokenizer.model, mode="reduce-overhead")
                 
-                # Note: We skip compiling the talker.model for now as it hits graph breaks
-                # in the autoregressive loop without static_cache support.
+                # Main Transformers (Talker and Code Predictor)
+                if hasattr(model.model, "talker") and model.model.talker:
+                    if LOAD_IN_4BIT:
+                        print("⚠️ Skipping talker compilation in 4-bit mode (unstable).")
+                    else:
+                        print("🚀 Compiling talker and code_predictor...")
+                        # Use default mode to avoid CUDA Graph issues with dynamic shapes
+                        if hasattr(model.model.talker, "model"):
+                            model.model.talker.model = torch.compile(model.model.talker.model)
+                        
+                        if hasattr(model.model.talker, "code_predictor") and hasattr(model.model.talker.code_predictor, "model"):
+                            model.model.talker.code_predictor.model = torch.compile(model.model.talker.code_predictor.model)
                 
                 print("✨ Compilation successful")
             except Exception as e:
@@ -240,7 +252,7 @@ def load_model(model_path: str):
                 print("🔥 Running warmup generation...")
                 with torch.inference_mode():
                     _ = model.generate_custom_voice(
-                        text="Warmup", language="English", speaker="Ryan", max_new_tokens=20, use_cache=True
+                        text="Warmup generation for compilation.", language="English", speaker="Ryan", max_new_tokens=50, use_cache=True
                     )
                 print("✅ Warmup complete")
             except Exception as e:
@@ -349,10 +361,26 @@ def preprocess_text(text: str) -> str:
 
 
 def split_text_to_sentences(text: str) -> list[str]:
-    """Split text into sentences for batch processing."""
-    # Split by . ! ? followed by space or newline
-    sentences = re.split(r'(?<=[.!?])\s+|\n+', text)
-    return [s.strip() for s in sentences if s.strip()]
+    """Split text into segments for batch processing, balancing length and natural pauses."""
+    # 1. Initial split by major punctuation (. ! ?) or newlines
+    initial = re.split(r'(?<=[.!?])\s+|\n+', text)
+    
+    segments = []
+    for s in initial:
+        s = s.strip()
+        if not s:
+            continue
+            
+        # 2. If a segment is still very long, split by secondary punctuation (, ; : or -)
+        # This allows much better batch parallelism without significantly hurting prosody.
+        if len(s) > 110:
+            # Split by , ; : or - (if preceded by space)
+            sub = re.split(r'(?<=[,;:])\s+|(?<=\s-)\s+', s)
+            segments.extend([ss.strip() for ss in sub if ss.strip()])
+        else:
+            segments.append(s)
+            
+    return segments
 
 
 class GenerateRequest(BaseModel):
@@ -601,8 +629,9 @@ async def generate_audio(data: GenerateRequest, user: str = Depends(get_current_
         raise HTTPException(status_code=500, detail=str(e))
 
     elapsed = time.time() - start_time
-    # Estimate audio duration (roughly) if needed for RTF
-    audio_duration = len(final_wavs[0]) / sample_rate if final_wavs else 0
+    # Calculate total audio duration across all sentences for accurate RTF
+    total_audio_samples = sum(len(w) for w in all_wavs) if 'all_wavs' in locals() else len(combined_wav)
+    audio_duration = total_audio_samples / final_sr if 'final_sr' in locals() else (len(combined_wav) / 24000)
     rtf = elapsed / audio_duration if audio_duration > 0 else 0
     chars_per_sec = len(data.text) / elapsed if elapsed > 0 else 0
     
