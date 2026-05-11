@@ -3,6 +3,7 @@ soundfile
 rich
 transformers
 accelerate
+bitsandbytes
 qwen-tts
 huggingface_hub[cli]
 triton

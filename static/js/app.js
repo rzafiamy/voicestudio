@@ -22,6 +22,22 @@ let wavesurfer = null;         // Wavesurfer instance
 let currentViewItem = null;    // Track currently viewed history item
 
 /**
+ * Stop all active audio playback
+ */
+function stopAllAudio() {
+    // Stop floating player
+    const floatingAudio = document.getElementById('audioElement');
+    if (floatingAudio) {
+        floatingAudio.pause();
+    }
+    
+    // Stop wavesurfer
+    if (wavesurfer && wavesurfer.isPlaying()) {
+        wavesurfer.pause();
+    }
+}
+
+/**
  * Client-side Routing System
  */
 function navigateTo(path, pushState = true) {
@@ -102,11 +118,18 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initial VRAM check and set interval
     updateVRAMStatus();
+    updateStorageStatus();
     setInterval(updateVRAMStatus, 3000);
+    setInterval(updateStorageStatus, 10000); // Storage less frequent
 });
 
 // VRAM Monitoring
-async function updateVRAMStatus() {
+async function updateVRAMStatus(isManual = false) {
+    const refreshBtn = document.getElementById('vramRefreshBtn');
+    if (isManual && refreshBtn) {
+        refreshBtn.classList.add('spinning');
+    }
+
     try {
         const response = await apiFetch(`${API_BASE}/api/vram`);
         if (!response) return;
@@ -144,6 +167,44 @@ async function updateVRAMStatus() {
         }
     } catch (error) {
         console.error('Error fetching VRAM status:', error);
+    } finally {
+        if (isManual && refreshBtn) {
+            // Keep spinning for at least 500ms for visual feedback
+            setTimeout(() => {
+                refreshBtn.classList.remove('spinning');
+            }, 500);
+        }
+    }
+}
+
+// Storage Monitoring
+async function updateStorageStatus() {
+    try {
+        const response = await apiFetch(`${API_BASE}/api/storage_stats`);
+        if (!response) return;
+        const data = await response.json();
+        
+        const text = document.getElementById('storageText');
+        const fill = document.getElementById('storageFill');
+        
+        if (!text || !fill) return;
+
+        const sizeMB = (data.total_size / (1024 * 1024)).toFixed(1);
+        const sizeGB = (data.total_size / (1024 ** 3)).toFixed(2);
+        
+        if (data.total_size > (1024 ** 3)) {
+            text.textContent = `${sizeGB} GB`;
+        } else {
+            text.textContent = `${sizeMB} MB`;
+        }
+
+        // We assume 2GB is the soft limit for the bar visualization
+        const softLimit = 2 * (1024 ** 3);
+        const percentage = Math.min((data.total_size / softLimit) * 100, 100);
+        fill.style.width = `${percentage}%`;
+
+    } catch (error) {
+        console.error('Error fetching storage status:', error);
     }
 }
 
@@ -281,6 +342,15 @@ function setupEventListeners() {
         if (modal.onConfirm) modal.onConfirm();
         hideModal('confirmModal');
     };
+
+    // VRAM Refresh listener
+    const vramRefreshBtn = document.getElementById('vramRefreshBtn');
+    if (vramRefreshBtn) {
+        vramRefreshBtn.onclick = (e) => {
+            e.stopPropagation();
+            updateVRAMStatus(true);
+        };
+    }
 }
 
 
@@ -546,7 +616,7 @@ async function handleModelSwitch(e) {
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.error || 'Failed to switch model');
+            throw new Error(error.detail || error.error || 'Failed to switch model');
         }
 
         const result = await response.json();
@@ -626,13 +696,14 @@ async function handleGenerate(e) {
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.error || 'Generation failed');
+            throw new Error(error.detail || error.error || 'Generation failed');
         }
 
         const result = await response.json();
         hideLoading();
         showAudioPlayer(result);
         loadHistory();
+        updateStorageStatus(); // Update storage after new file is created
 
     } catch (error) {
         console.error('Error generating audio:', error);
@@ -701,6 +772,7 @@ function hideLoading() {
 
 // Mode Switching Logic
 async function switchToViewMode(item, updateUrl = true) {
+    stopAllAudio();
     currentViewItem = item;
     
     if (updateUrl) {
@@ -809,6 +881,7 @@ function formatTime(seconds) {
 }
 
 function switchToEditMode(item = null, updateUrl = true) {
+    stopAllAudio();
     if (updateUrl) {
         window.history.pushState({}, '', '/studio');
     }
@@ -859,6 +932,16 @@ function showAudioPlayer(result) {
 
     player.classList.add('visible');
     audio.play().catch(err => console.log('Autoplay prevented'));
+}
+
+function closeAudioPlayer() {
+    const player = document.getElementById('audioPlayer');
+    const audio = document.getElementById('audioElement');
+    if (player) player.classList.remove('visible');
+    if (audio) {
+        audio.pause();
+        audio.src = '';
+    }
 }
 
 function showError(message) {
@@ -1085,10 +1168,7 @@ function performReset() {
     if (voiceKeys.length > 0) selectVoice(voiceKeys[0]);
 
     // Reset player
-    document.getElementById('audioPlayer').classList.remove('visible');
-    const audio = document.getElementById('audioElement');
-    audio.pause();
-    audio.src = '';
+    closeAudioPlayer();
     
     // Reset UI mode
     navigateTo('/studio');

@@ -72,20 +72,8 @@
                     <span id="currentModelDisplay">Loading Model...</span>
                 </div>
             </div>
-            
 
-
-            <div class="top-actions">
-                <div class="vram-monitor" id="vramMonitor" style="display: none;">
-                    <div class="vram-info">
-                        <span class="vram-label">VRAM</span>
-                        <span class="vram-value" id="vramText">0/0 GB</span>
-                    </div>
-                    <div class="vram-bar-container">
-                        <div class="vram-bar-fill" id="vramFill" style="width: 0%"></div>
-                    </div>
-                </div>
-
+            <div class="header-center">
                 <div class="custom-select-container" id="modelSelectContainer">
                     <div class="custom-select-trigger" id="modelTrigger">
                         <div class="trigger-content">
@@ -101,6 +89,38 @@
                 <select id="model" name="model" class="hidden-select">
                     <option value="">Select Model</option>
                 </select>
+            </div>
+            
+            <div class="header-right">
+                <div class="header-stats-group">
+                    <div class="vram-monitor" id="vramMonitor" style="display: none;">
+                        <div class="vram-info">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span class="vram-label">VRAM</span>
+                                <button id="vramRefreshBtn" class="vram-refresh-btn" title="Refresh VRAM Status">
+                                    <i data-lucide="rotate-cw"></i>
+                                </button>
+                            </div>
+                            <span class="vram-value" id="vramText">0/0 GB</span>
+                        </div>
+                        <div class="vram-bar-container">
+                            <div class="vram-bar-fill" id="vramFill" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="storage-monitor" id="storageMonitor">
+                        <div class="storage-info">
+                            <span class="storage-label">
+                                <i data-lucide="hard-drive"></i>
+                                Library
+                            </span>
+                            <span class="storage-value" id="storageText">0 MB</span>
+                        </div>
+                        <div class="storage-bar-container">
+                            <div class="storage-bar-fill" id="storageFill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </header>
 
@@ -317,7 +337,7 @@
             <div class="player-controls">
                 <audio id="audioElement" controls></audio>
             </div>
-            <button onclick="document.getElementById('audioPlayer').classList.remove('visible')" class="btn-close" style="background: transparent; border: none; color: var(--text-dim); cursor: pointer;">
+            <button onclick="closeAudioPlayer()" class="btn-close" style="background: transparent; border: none; color: var(--text-dim); cursor: pointer;">
                 <i data-lucide="x"></i>
             </button>
         </div>
