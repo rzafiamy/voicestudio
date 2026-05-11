@@ -364,6 +364,7 @@ async def help_page(request: Request, user: str = Depends(get_current_user)):
     return templates.TemplateResponse(request, "help.html")
 
 
+
 # ── API routes (all protected) ────────────────────────────────────────────────
 @app.get("/api/vram")
 async def get_vram_status(user: str = Depends(get_current_user)):
@@ -559,6 +560,12 @@ async def upload_audio(file: UploadFile = File(...), user: str = Depends(get_cur
     with open(save_path, "wb") as f:
         f.write(content)
     return {"success": True, "filename": safe_filename, "message": "File uploaded successfully"}
+
+
+@app.get("/{full_path:path}", response_class=HTMLResponse)
+async def catch_all(request: Request, full_path: str, user: str = Depends(get_current_user)):
+    # This serves as a fallback for frontend routing
+    return templates.TemplateResponse(request, "index.html")
 
 
 # ── Entrypoint ────────────────────────────────────────────────────────────────

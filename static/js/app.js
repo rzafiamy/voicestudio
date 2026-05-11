@@ -21,6 +21,66 @@ let synthesisStartTime = 0;
 let wavesurfer = null;         // Wavesurfer instance
 let currentViewItem = null;    // Track currently viewed history item
 
+/**
+ * Client-side Routing System
+ */
+function navigateTo(path, pushState = true) {
+    if (pushState) {
+        window.history.pushState({}, '', path);
+    }
+    handleRouting();
+}
+
+async function handleRouting() {
+    const path = window.location.pathname;
+    
+    // 1. History Item View: /history/{timestamp}
+    if (path.startsWith('/history/')) {
+        const timestamp = path.replace('/history/', '');
+        
+        // Wait for history if not yet loaded
+        if (!historyData || historyData.length === 0) {
+            const data = await loadHistory();
+            if (!data || data.length === 0) {
+                navigateTo('/studio');
+                return;
+            }
+        }
+        
+        const item = historyData.find(h => h.timestamp === timestamp);
+        if (item) {
+            switchToViewMode(item, false); // false to avoid redundant pushState
+            
+            // Highlight in sidebar if it exists
+            updateSidebarSelection(timestamp);
+        } else {
+            // Item not found, fallback to studio
+            navigateTo('/studio');
+        }
+        return;
+    }
+    
+    // 2. Studio / Home: / or /studio
+    if (path === '/' || path === '/studio') {
+        switchToEditMode(null, false);
+        updateSidebarSelection(null);
+        return;
+    }
+    
+    // Default fallback
+    if (path !== '/help' && path !== '/login') {
+        // Only redirect if it's not a known non-app path
+        // (FastAPI handles help and login, but they might be hit if routing is loose)
+    }
+}
+
+function updateSidebarSelection(timestamp) {
+    document.querySelectorAll('.history-item').forEach(el => {
+        const isMatch = el.dataset.timestamp === timestamp;
+        el.classList.toggle('active', isMatch);
+    });
+}
+
 
 
 // Initialize app
@@ -32,8 +92,13 @@ document.addEventListener('DOMContentLoaded', () => {
     loadVoices();
     loadLanguages();
     loadModels();
-    loadHistory();
+    loadHistory().then(() => {
+        // Handle routing after history is loaded
+        handleRouting();
+    });
     setupEventListeners();
+    
+    window.addEventListener('popstate', handleRouting);
     
     // Initial VRAM check and set interval
     updateVRAMStatus();
@@ -635,9 +700,12 @@ function hideLoading() {
 }
 
 // Mode Switching Logic
-async function switchToViewMode(item) {
+async function switchToViewMode(item, updateUrl = true) {
     currentViewItem = item;
     
+    if (updateUrl) {
+        window.history.pushState({}, '', `/history/${item.timestamp}`);
+    }
     const form = document.getElementById('generateForm');
     const view = document.getElementById('sessionView');
     const emptyState = document.getElementById('emptyState');
@@ -741,7 +809,10 @@ function formatTime(seconds) {
     return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
-function switchToEditMode(item = null) {
+function switchToEditMode(item = null, updateUrl = true) {
+    if (updateUrl) {
+        window.history.pushState({}, '', '/studio');
+    }
 
     const form = document.getElementById('generateForm');
     const view = document.getElementById('sessionView');
@@ -817,8 +888,10 @@ async function loadHistory() {
         const response = await apiFetch(`${API_BASE}/api/history`);
         historyData = await response.json();
         renderHistory(historyData);
+        return historyData;
     } catch (error) {
         console.error('Error loading history:', error);
+        return [];
     }
 }
 
@@ -852,6 +925,7 @@ function handleSearch(e) {
 function createHistoryItem(item) {
     const div = document.createElement('div');
     div.className = 'history-item';
+    div.dataset.timestamp = item.timestamp;
     
     const info = getFriendlyModelInfo(item.model || '');
 
@@ -875,8 +949,7 @@ function createHistoryItem(item) {
     `;
     div.onclick = () => {
         // Mark as active
-        document.querySelectorAll('.history-item').forEach(i => i.classList.remove('active'));
-        div.classList.add('active');
+        updateSidebarSelection(item.timestamp);
         
         // SWITCH TO VIEW MODE
         switchToViewMode(item);
@@ -1019,7 +1092,7 @@ function performReset() {
     audio.src = '';
     
     // Reset UI mode
-    switchToEditMode();
+    navigateTo('/studio');
     
     showSuccess('New session started');
 }
