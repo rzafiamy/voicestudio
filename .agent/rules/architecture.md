@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # Project Architecture Rules
 
 ## 1. Stack Overview
@@ -22,3 +26,8 @@ All text sent to the `/api/generate` endpoint must follow this pipeline:
 - Models are discovered dynamically in `./models/` and `.`.
 - Only one model is loaded at a time to preserve VRAM.
 - Switching models triggers explicit `gc.collect()` and `torch.cuda.empty_cache()`.
+
+## 5. Virtual Environment
+- Always use the python in current `venv` for any setup or code execution
+- all needed package should be in requirements.txt
+
