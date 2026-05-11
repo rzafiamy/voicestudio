@@ -59,7 +59,7 @@ async function handleRouting() {
         if (!historyData || historyData.length === 0) {
             const data = await loadHistory();
             if (!data || data.length === 0) {
-                navigateTo('/studio');
+                showHome();
                 return;
             }
         }
@@ -71,23 +71,27 @@ async function handleRouting() {
             // Highlight in sidebar if it exists
             updateSidebarSelection(timestamp);
         } else {
-            // Item not found, fallback to studio
-            navigateTo('/studio');
+            // Item not found, fallback to home
+            showHome();
         }
         return;
     }
     
-    // 2. Studio / Home: / or /studio
-    if (path === '/' || path === '/studio') {
-        switchToEditMode(null, false);
-        updateSidebarSelection(null);
+    // 2. Studio: /studio
+    if (path === '/studio') {
+        showStudio(false);
+        return;
+    }
+
+    // 3. Home / Default: /
+    if (path === '/') {
+        showHome(false);
         return;
     }
     
     // Default fallback
     if (path !== '/help' && path !== '/login') {
-        // Only redirect if it's not a known non-app path
-        // (FastAPI handles help and login, but they might be hit if routing is loose)
+        showHome();
     }
 }
 
@@ -308,6 +312,25 @@ function setupEventListeners() {
         };
     }
 
+    // Download button
+    const downloadBtn = document.getElementById('downloadAudioBtn');
+    if (downloadBtn) {
+        downloadBtn.onclick = () => {
+            if (currentViewItem) {
+                downloadAudio(currentViewItem.filename, `production_${currentViewItem.timestamp}.wav`);
+            }
+        };
+    }
+
+    // Home & Studio Navigation
+    const homeBtn = document.getElementById('homeBtn');
+    const studioBtn = document.getElementById('studioBtn');
+    const refreshCatalogBtn = document.getElementById('refreshCatalogBtn');
+
+    if (homeBtn) homeBtn.onclick = () => showHome();
+    if (studioBtn) studioBtn.onclick = () => showStudio();
+    if (refreshCatalogBtn) refreshCatalogBtn.onclick = () => loadHistory();
+
     // Copy transcript button
     const copyBtn = document.getElementById('copyTranscriptBtn');
     if (copyBtn) {
@@ -339,6 +362,18 @@ function setupEventListeners() {
         });
     }
 
+    // Delete button in session view
+    const deleteBtn = document.getElementById('deleteAudioBtn');
+    if (deleteBtn) {
+        deleteBtn.onclick = () => {
+            if (currentViewItem) {
+                showModal('deleteModal', () => {
+                    performDelete(currentViewItem.timestamp);
+                }, 'deleteModalConfirm', 'deleteModalCancel');
+            }
+        };
+    }
+
     // Modal close listeners
     document.getElementById('modalCancel').onclick = () => hideModal('confirmModal');
     document.getElementById('modalConfirm').onclick = () => {
@@ -346,6 +381,18 @@ function setupEventListeners() {
         if (modal.onConfirm) modal.onConfirm();
         hideModal('confirmModal');
     };
+
+    // Delete modal listeners
+    const deleteCancel = document.getElementById('deleteModalCancel');
+    if (deleteCancel) deleteCancel.onclick = () => hideModal('deleteModal');
+    const deleteConfirm = document.getElementById('deleteModalConfirm');
+    if (deleteConfirm) {
+        deleteConfirm.onclick = () => {
+            const modal = document.getElementById('deleteModal');
+            if (modal.onConfirm) modal.onConfirm();
+            hideModal('deleteModal');
+        };
+    }
 
     // VRAM Refresh listener
     const vramRefreshBtn = document.getElementById('vramRefreshBtn');
@@ -852,10 +899,12 @@ async function switchToViewMode(item, updateUrl = true) {
     const view = document.getElementById('sessionView');
     const emptyState = document.getElementById('emptyState');
     const workbench = document.getElementById('workbenchSection');
+    const catalogSection = document.getElementById('catalogSection');
 
     // Show workbench if it was hidden
     if (workbench) workbench.style.display = 'flex';
     if (emptyState) emptyState.style.display = 'none';
+    if (catalogSection) catalogSection.style.display = 'none';
 
     // Toggle containers
     if (form) form.style.display = 'none';
@@ -878,8 +927,11 @@ async function switchToViewMode(item, updateUrl = true) {
     document.getElementById('viewModelName').textContent = modelInfo.name;
     
     // Set icon for model badge
-    const modelBadgeIcon = document.querySelector('#viewModelBadge i');
-    if (modelBadgeIcon) modelBadgeIcon.setAttribute('data-lucide', modelInfo.icon);
+    const modelBadge = document.getElementById('viewModelBadge');
+    if (modelBadge) {
+        const icon = modelBadge.querySelector('i, svg');
+        if (icon) icon.setAttribute('data-lucide', modelInfo.icon);
+    }
 
     if (item.speaker) {
         document.getElementById('viewVoiceBadge').style.display = 'flex';
@@ -923,13 +975,19 @@ function initWavesurfer(audioUrl) {
     playBtn.onclick = () => wavesurfer.playPause();
 
     wavesurfer.on('play', () => {
-        playIcon.setAttribute('data-lucide', 'pause');
-        lucide.createIcons();
+        const icon = document.getElementById('playIcon');
+        if (icon) {
+            icon.setAttribute('data-lucide', 'pause');
+            lucide.createIcons();
+        }
     });
 
     wavesurfer.on('pause', () => {
-        playIcon.setAttribute('data-lucide', 'play');
-        lucide.createIcons();
+        const icon = document.getElementById('playIcon');
+        if (icon) {
+            icon.setAttribute('data-lucide', 'play');
+            lucide.createIcons();
+        }
     });
 
     wavesurfer.on('audioprocess', () => {
@@ -958,11 +1016,25 @@ function switchToEditMode(item = null, updateUrl = true) {
 
     const form = document.getElementById('generateForm');
     const view = document.getElementById('sessionView');
+    const studioSection = document.getElementById('workbenchSection');
+    const catalogSection = document.getElementById('catalogSection');
+    const emptyState = document.getElementById('emptyState');
     
+    if (studioSection) studioSection.style.display = 'flex';
+    if (catalogSection) catalogSection.style.display = 'none';
+    
+    document.body.classList.remove('on-home');
+
     if (form) form.style.display = 'block';
     if (view) view.style.display = 'none';
 
+    // Highlight Studio button
+    document.getElementById('studioBtn').classList.add('active');
+    document.getElementById('homeBtn').classList.remove('active');
+
     if (item) {
+        if (emptyState) emptyState.style.display = 'none';
+
         // Populate form from item
         document.getElementById('text').value = item.text;
         if (item.language) document.getElementById('language').value = item.language;
@@ -981,10 +1053,188 @@ function switchToEditMode(item = null, updateUrl = true) {
                 selectVoice(item.speaker);
             }
         }
+    } else {
+        updateWorkbenchVisibility();
     }
     
     updateCharCount();
     if (window.lucide) lucide.createIcons();
+}
+
+/**
+ * Switch to Home / Catalog view
+ */
+function showHome(updateUrl = true) {
+    stopAllAudio();
+    if (updateUrl) {
+        window.history.pushState({}, '', '/');
+    }
+
+    const studioSection = document.getElementById('workbenchSection');
+    const catalogSection = document.getElementById('catalogSection');
+    const emptyState = document.getElementById('emptyState');
+
+    if (studioSection) studioSection.style.display = 'none';
+    if (emptyState) emptyState.style.display = 'none';
+    if (catalogSection) catalogSection.style.display = 'flex';
+
+    document.body.classList.add('on-home');
+
+    // Highlight Home button
+    document.getElementById('homeBtn').classList.add('active');
+    document.getElementById('studioBtn').classList.remove('active');
+    updateSidebarSelection(null);
+
+    renderPodcastGrid(historyData);
+    if (window.lucide) lucide.createIcons();
+}
+
+function showStudio(updateUrl = true) {
+    switchToEditMode(null, updateUrl);
+}
+
+function downloadAudio(filename, saveAs) {
+    const url = `${API_BASE}/api/audio/${filename}`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = saveAs || filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showSuccess('Download started');
+}
+
+async function performDelete(timestamp) {
+    try {
+        const response = await apiFetch(`${API_BASE}/api/history/${timestamp}`, {
+            method: 'DELETE'
+        });
+        
+        if (response && response.ok) {
+            showSuccess('Production deleted');
+            
+            // Refresh history and grid
+            await loadHistory();
+            
+            // If we were viewing the deleted item, go home
+            if (currentViewItem && currentViewItem.timestamp === timestamp) {
+                currentViewItem = null;
+                showHome();
+            }
+        } else {
+            const err = await response.json();
+            throw new Error(err.detail || 'Failed to delete');
+        }
+    } catch (error) {
+        console.error('Error deleting item:', error);
+        showError(error.message);
+    }
+}
+
+function renderPodcastGrid(data) {
+    const grid = document.getElementById('podcastGrid');
+    if (!grid) return;
+
+    if (!data || data.length === 0) {
+        grid.innerHTML = `
+            <div class="empty-catalog-state">
+                <div class="empty-icon-ring">
+                    <i data-lucide="layout-grid"></i>
+                </div>
+                <h3>No productions found</h3>
+                <p>Start creating in the studio to see your productions here.</p>
+                <button class="btn-primary" onclick="showStudio()">
+                    <i data-lucide="mic"></i>
+                    Open Studio
+                </button>
+            </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+        return;
+    }
+
+    grid.innerHTML = '';
+    data.forEach(item => {
+        const card = createPodcastCard(item);
+        grid.appendChild(card);
+    });
+    
+    if (window.lucide) lucide.createIcons();
+}
+
+function createPodcastCard(item) {
+    const div = document.createElement('div');
+    div.className = 'podcast-card';
+    
+    const info = getFriendlyModelInfo(item.model || '');
+    const title = item.text.length > 80 ? item.text.substring(0, 80) + '...' : item.text;
+    
+    div.innerHTML = `
+        <div class="card-image-area">
+            <div class="card-wave-decoration"></div>
+            <div class="card-speaker-badge">
+                <i data-lucide="mic-2"></i>
+                <span>${item.speaker || 'AI Voice'}</span>
+            </div>
+            <div class="card-play-overlay">
+                <div class="play-circle">
+                    <i data-lucide="play"></i>
+                </div>
+            </div>
+            <i data-lucide="${info.icon}" style="width: 48px; height: 48px; opacity: 0.1; color: var(--accent-primary);"></i>
+        </div>
+        <div class="card-content">
+            <div class="card-timestamp">${formatRelativeTime(item.timestamp)}</div>
+            <h3 class="card-title">${title}</h3>
+            <div class="card-footer">
+                <div class="card-meta-info">
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <i data-lucide="zap" style="width: 12px; height: 12px;"></i>
+                        <span>${item.chars_per_sec ? item.chars_per_sec.toFixed(1) : '0'} ch/s</span>
+                    </div>
+                </div>
+                <div class="card-actions">
+                    <button class="btn-card-action delete-card-btn" title="Delete" style="--border-hover: rgba(239, 68, 68, 0.3);">
+                        <i data-lucide="trash-2" style="color: #ef4444; width: 14px; height: 14px;"></i>
+                    </button>
+                    <button class="btn-card-action download-card-btn" title="Download">
+                        <i data-lucide="download"></i>
+                    </button>
+                    <button class="btn-card-action view-card-btn" title="View details">
+                        <i data-lucide="external-link"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Click on card body opens view mode
+    div.onclick = (e) => {
+        switchToViewMode(item);
+    };
+
+    // Specific button actions
+    const deleteCardBtn = div.querySelector('.delete-card-btn');
+    deleteCardBtn.onclick = (e) => {
+        e.stopPropagation();
+        showModal('deleteModal', () => {
+            performDelete(item.timestamp);
+        }, 'deleteModalConfirm', 'deleteModalCancel');
+    };
+
+    const downloadBtn = div.querySelector('.download-card-btn');
+    downloadBtn.onclick = (e) => {
+        e.stopPropagation();
+        downloadAudio(item.filename, `production_${item.timestamp}.wav`);
+    };
+
+    const viewBtn = div.querySelector('.view-card-btn');
+    viewBtn.onclick = (e) => {
+        e.stopPropagation();
+        switchToViewMode(item);
+    };
+
+    return div;
 }
 
 function showAudioPlayer(result) {
@@ -1002,6 +1252,14 @@ function showAudioPlayer(result) {
 
     player.classList.add('visible');
     audio.play().catch(err => console.log('Autoplay prevented'));
+
+    // Handle download button for the latest production
+    const downloadLatestBtn = document.getElementById('downloadLatestBtn');
+    if (downloadLatestBtn) {
+        downloadLatestBtn.onclick = () => {
+            downloadAudio(result.filename, `production_${result.timestamp}.wav`);
+        };
+    }
 }
 
 function closeAudioPlayer() {
@@ -1040,6 +1298,7 @@ async function loadHistory() {
         const response = await apiFetch(`${API_BASE}/api/history`);
         historyData = await response.json();
         renderHistory(historyData);
+        renderPodcastGrid(historyData);
         return historyData;
     } catch (error) {
         console.error('Error loading history:', error);
@@ -1212,7 +1471,7 @@ function resetEditor() {
     // This is now handled by the event listener calling showModal
 }
 
-function showModal(id, onConfirm) {
+function showModal(id, onConfirm, confirmId = 'modalConfirm', cancelId = 'modalCancel') {
     const modal = document.getElementById(id);
     modal.classList.add('active');
     modal.onConfirm = onConfirm;

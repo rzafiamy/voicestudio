@@ -839,5 +839,30 @@ def main():
     uvicorn.run(app, host=args.host, port=args.port, log_level="debug" if args.debug else "info")
 
 
+@app.delete("/api/history/{timestamp}")
+async def delete_history_item(timestamp: str, user: str = Depends(get_current_user)):
+    try:
+        # Find files matching the timestamp
+        meta_file = STORAGE_DIR / f"meta_{timestamp}.json"
+        audio_file = STORAGE_DIR / f"audio_{timestamp}.wav"
+        
+        deleted = False
+        if meta_file.exists():
+            meta_file.unlink()
+            deleted = True
+        if audio_file.exists():
+            audio_file.unlink()
+            deleted = True
+            
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Item not found")
+            
+        return {"success": True, "message": f"Session {timestamp} deleted"}
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == "__main__":
     main()
