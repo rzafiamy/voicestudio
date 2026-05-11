@@ -331,6 +331,19 @@ function setupEventListeners() {
     if (studioBtn) studioBtn.onclick = () => showStudio();
     if (refreshCatalogBtn) refreshCatalogBtn.onclick = () => loadHistory();
 
+    // Catalog Search Filter
+    const catalogSearchInput = document.getElementById('catalogSearchInput');
+    if (catalogSearchInput) {
+        catalogSearchInput.oninput = (e) => {
+            const query = e.target.value.toLowerCase();
+            const filtered = historyData.filter(item => 
+                item.text.toLowerCase().includes(query) || 
+                (item.speaker && item.speaker.toLowerCase().includes(query))
+            );
+            renderPodcastGrid(filtered);
+        };
+    }
+
     // Copy transcript button
     const copyBtn = document.getElementById('copyTranscriptBtn');
     if (copyBtn) {
@@ -837,6 +850,9 @@ function updateWorkbenchVisibility() {
     
     const hasSelection = modelSelect && modelSelect.value !== "";
     
+    // ONLY update if we are NOT on the home page
+    if (document.body.classList.contains('on-home')) return;
+
     if (hasSelection) {
         if (workbench) workbench.style.display = 'flex';
         if (emptyState) emptyState.style.display = 'none';
@@ -1023,6 +1039,10 @@ function switchToEditMode(item = null, updateUrl = true) {
     if (studioSection) studioSection.style.display = 'flex';
     if (catalogSection) catalogSection.style.display = 'none';
     
+    // Show technical monitors in Studio
+    const topBar = document.querySelector('.top-bar');
+    if (topBar) topBar.style.display = 'flex';
+
     document.body.classList.remove('on-home');
 
     if (form) form.style.display = 'block';
@@ -1077,6 +1097,10 @@ function showHome(updateUrl = true) {
     if (studioSection) studioSection.style.display = 'none';
     if (emptyState) emptyState.style.display = 'none';
     if (catalogSection) catalogSection.style.display = 'flex';
+
+    // Hide technical monitors on Home
+    const topBar = document.querySelector('.top-bar');
+    if (topBar) topBar.style.display = 'none';
 
     document.body.classList.add('on-home');
 

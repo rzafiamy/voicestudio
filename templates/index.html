@@ -330,10 +330,14 @@
                     <h1>Your Podcast Library</h1>
                     <p>Recent productions ready for your next project</p>
                 </div>
-                <div class="catalog-actions">
-                    <button class="btn-secondary" id="refreshCatalogBtn">
+                
+                <div class="catalog-search-wrapper">
+                    <div class="catalog-search-box">
+                        <i data-lucide="search"></i>
+                        <input type="text" id="catalogSearchInput" placeholder="Filter by content or voice...">
+                    </div>
+                    <button class="btn-refresh-mini" id="refreshCatalogBtn" title="Refresh Library">
                         <i data-lucide="rotate-cw"></i>
-                        Refresh
                     </button>
                 </div>
             </div>
