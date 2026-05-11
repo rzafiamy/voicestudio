@@ -210,22 +210,29 @@
                 <div class="editor-card">
                     <div class="view-header">
                         <div class="view-title-group">
-                            <h2 id="viewTitle">Production Details</h2>
-                            <p id="viewTimestamp" class="view-subtitle"></p>
+                            <h2 id="viewTitle">Studio Session</h2>
+                            <div class="view-meta-row">
+                                <span id="viewTimestamp" class="view-subtitle"></span>
+                                <span class="meta-divider"></span>
+                                <div id="viewModelBadge" class="meta-tag model">
+                                    <i data-lucide="cpu"></i>
+                                    <span id="viewModelName">Model</span>
+                                </div>
+                                <div id="viewVoiceBadge" class="meta-tag voice">
+                                    <i data-lucide="mic-2"></i>
+                                    <span id="viewVoiceName">Voice</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="view-badges" id="viewBadges">
-                            <!-- Badges injected here -->
+                        <div class="view-actions">
+                            <button id="copyTranscriptBtn" class="btn-icon-text" title="Copy transcript">
+                                <i data-lucide="copy"></i>
+                                <span>Copy Script</span>
+                            </button>
                         </div>
                     </div>
 
                     <div class="view-text-content">
-                        <div class="view-label-row">
-                            <div class="view-label">Script</div>
-                            <button id="copyTranscriptBtn" class="btn-icon-text" title="Copy to clipboard">
-                                <i data-lucide="copy"></i>
-                                <span>Copy</span>
-                            </button>
-                        </div>
                         <div id="viewText" class="view-text scrollable-script"></div>
                     </div>
 
@@ -240,22 +247,15 @@
                         <div class="metric-item">
                             <div class="metric-icon"><i data-lucide="file-text"></i></div>
                             <div class="metric-content">
-                                <div class="metric-label">Words</div>
+                                <div class="metric-label">Word Count</div>
                                 <div id="viewWordCount" class="metric-value">-</div>
                             </div>
                         </div>
-                        <div class="metric-item">
+                        <div class="metric-item technical" id="efficiencyMetric">
                             <div class="metric-icon"><i data-lucide="zap"></i></div>
                             <div class="metric-content">
-                                <div class="metric-label">Efficiency</div>
+                                <div class="metric-label">Speed</div>
                                 <div id="viewEfficiency" class="metric-value">-</div>
-                            </div>
-                        </div>
-                        <div class="metric-item">
-                            <div class="metric-icon"><i data-lucide="cpu"></i></div>
-                            <div class="metric-content">
-                                <div class="metric-label">Model</div>
-                                <div id="viewModel" class="metric-value">-</div>
                             </div>
                         </div>
                     </div>

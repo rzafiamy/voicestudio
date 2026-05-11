@@ -727,29 +727,28 @@ async function switchToViewMode(item, updateUrl = true) {
         viewText.textContent = item.text;
     }
     
-    document.getElementById('viewTimestamp').textContent = `${formatTimestamp(item.timestamp)} (${formatRelativeTime(item.timestamp)})`;
+    document.getElementById('viewTimestamp').textContent = formatRelativeTime(item.timestamp);
     document.getElementById('viewDuration').textContent = item.elapsed_time ? `${item.elapsed_time.toFixed(2)}s` : 'N/A';
     document.getElementById('viewWordCount').textContent = countWords(item.text);
     document.getElementById('viewEfficiency').textContent = item.chars_per_sec ? `${item.chars_per_sec.toFixed(1)} ch/s` : 'N/A';
     
     const modelInfo = getFriendlyModelInfo(item.model || '');
-    document.getElementById('viewModel').textContent = modelInfo.name;
-
-    // Badges in view
-    const viewBadges = document.getElementById('viewBadges');
-    viewBadges.innerHTML = '';
+    document.getElementById('viewModelName').textContent = modelInfo.name;
     
-    const modelBadge = document.createElement('div');
-    modelBadge.className = 'badge-mini model';
-    modelBadge.innerHTML = `<i data-lucide="${modelInfo.icon}"></i> <span>${modelInfo.name}</span>`;
-    viewBadges.appendChild(modelBadge);
+    // Set icon for model badge
+    const modelBadgeIcon = document.querySelector('#viewModelBadge i');
+    if (modelBadgeIcon) modelBadgeIcon.setAttribute('data-lucide', modelInfo.icon);
 
     if (item.speaker) {
-        const voiceBadge = document.createElement('div');
-        voiceBadge.className = 'badge-mini voice';
-        voiceBadge.innerHTML = `<i data-lucide="mic-2"></i> <span>${item.speaker}</span>`;
-        viewBadges.appendChild(voiceBadge);
+        document.getElementById('viewVoiceBadge').style.display = 'flex';
+        document.getElementById('viewVoiceName').textContent = item.speaker;
+    } else {
+        document.getElementById('viewVoiceBadge').style.display = 'none';
     }
+
+    // Set title based on content snippet
+    const snippet = item.text.length > 30 ? item.text.substring(0, 30) + '...' : item.text;
+    document.getElementById('viewTitle').textContent = snippet || 'Studio Session';
 
     // Initialize/Refresh Wavesurfer
     initWavesurfer(`${API_BASE}/api/audio/${item.filename}`);
