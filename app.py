@@ -24,6 +24,7 @@ import bcrypt
 from pydantic import BaseModel
 from transformers import BitsAndBytesConfig
 from qwen_tts import Qwen3TTSModel
+import threading
 
 load_dotenv()
 
@@ -47,8 +48,21 @@ if torch.cuda.is_available():
     torch.backends.cuda.matmul.allow_tf32 = True
     torch.backends.cudnn.allow_tf32 = True
     torch.set_float32_matmul_precision('high')
+
+# ── torch.compile persistent cache (skip recompilation across restarts) ──────
+_COMPILE_CACHE_DIR = os.getenv("TORCHINDUCTOR_CACHE_DIR", os.path.join(os.path.dirname(__file__), ".torch_compile_cache"))
+os.environ.setdefault("TORCHINDUCTOR_CACHE_DIR", _COMPILE_CACHE_DIR)
+_COMPILE_CACHE_IS_WARM = Path(_COMPILE_CACHE_DIR).exists() and any(Path(_COMPILE_CACHE_DIR).rglob("*.json"))
+try:
     import torch._dynamo
     torch._dynamo.config.cache_size_limit = 512
+    # Capture .item() calls (used by Flash Attention) instead of breaking the graph
+    torch._dynamo.config.capture_scalar_outputs = True
+    import torch._inductor.config as _inductor_cfg
+    _inductor_cfg.fx_graph_cache = True
+    _inductor_cfg.fx_graph_remote_cache = False
+except Exception:
+    pass
 
 # ── Auth helpers ─────────────────────────────────────────────────────────────
 HASHED_ADMIN_PASSWORD = bcrypt.hashpw(ADMIN_PASSWORD.encode(), bcrypt.gensalt())
@@ -82,12 +96,9 @@ from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Load model on startup
-    print(f"🚀 Application starting... loading default model: {DEFAULT_MODEL}")
-    try:
-        load_model(DEFAULT_MODEL)
-    except Exception as e:
-        print(f"❌ Failed to load default model on startup: {e}")
+    # Load model on startup in background to allow status polling
+    print(f"🚀 Application starting... loading default model in background: {DEFAULT_MODEL}")
+    threading.Thread(target=load_model, args=(DEFAULT_MODEL,), daemon=True).start()
     yield
     # Cleanup on shutdown
     print("👋 Application shutting down...")
@@ -101,6 +112,15 @@ templates = Jinja2Templates(directory="templates")
 model = None
 model_name = None
 model_type = None
+model_status = {
+    "status": "idle",
+    "message": "Waiting for model...",
+    "progress": 0,
+    "elapsed": 0,
+    "start_time": None,
+    "last_error": None
+}
+model_load_lock = threading.Lock()
 STORAGE_DIR = Path("storage")
 STORAGE_DIR.mkdir(exist_ok=True)
 
@@ -158,28 +178,39 @@ AVAILABLE_MODELS = discover_local_models()
 
 
 def load_model(model_path: str):
-    global model, model_name, model_type
+    global model, model_name, model_type, model_status
 
-    if model is not None:
-        print(f"Unloading previous model: {model_name}")
-        try:
-            if hasattr(model, "to"):
-                model.to("cpu")
-        except Exception:
-            pass
-        del model
-        model = None
-        gc.collect()
-        gc.collect()
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-            torch.cuda.ipc_collect()
-            torch.cuda.synchronize()
-            time.sleep(0.2)
+    if not model_load_lock.acquire(blocking=False):
+        print(f"⚠️ Model load already in progress. Skipping request for {model_path}")
+        return
 
-    model_path = model_path.rstrip("/")
-    print(f"Loading model: {model_path}")
     try:
+        model_status["status"] = "loading"
+        model_status["message"] = f"Loading {os.path.basename(model_path)}..."
+        model_status["start_time"] = time.time()
+        model_status["progress"] = 0
+        model_status["last_error"] = None
+
+        if model is not None:
+            print(f"Unloading previous model: {model_name}")
+            try:
+                if hasattr(model, "to"):
+                    model.to("cpu")
+            except Exception:
+                pass
+            del model
+            model = None
+            gc.collect()
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                torch.cuda.ipc_collect()
+                torch.cuda.synchronize()
+                time.sleep(0.2)
+
+        model_path = model_path.rstrip("/")
+        print(f"Loading model: {model_path}")
+        
         if torch.cuda.is_available():
             torch.cuda.set_device(0)
         torch.set_grad_enabled(False)
@@ -213,30 +244,46 @@ def load_model(model_path: str):
 
         if USE_COMPILE:
             try:
-                print("🚀 Compiling sub-models...")
-                # Non-autoregressive sub-models
+                if _COMPILE_CACHE_IS_WARM:
+                    print(f"⚡ torch.compile cache found at {_COMPILE_CACHE_DIR}")
+                    print("   Compiled kernels will be loaded from cache — no recompilation needed.")
+                else:
+                    print(f"🔨 No compile cache found at {_COMPILE_CACHE_DIR}")
+                    print("   First-time compilation will run during warmup — this may take 1-3 minutes.")
+                    print("   Subsequent restarts will load from cache and be much faster.")
+
+                # Non-autoregressive sub-models (registered lazily, compiled at first forward)
                 if hasattr(model.model, "speaker_encoder") and model.model.speaker_encoder:
-                    model.model.speaker_encoder = torch.compile(model.model.speaker_encoder, mode="reduce-overhead")
-                
+                    print("   → Registering speaker_encoder for compilation...")
+                    # Using default mode with dynamic shapes is faster for warmup than reduce-overhead
+                    model.model.speaker_encoder = torch.compile(model.model.speaker_encoder, dynamic=True)
+
                 if hasattr(model.model, "speech_tokenizer") and model.model.speech_tokenizer:
-                    model.model.speech_tokenizer.model = torch.compile(model.model.speech_tokenizer.model, mode="reduce-overhead")
-                
+                    print("   → Registering speech_tokenizer for compilation...")
+                    model.model.speech_tokenizer.model = torch.compile(model.model.speech_tokenizer.model, dynamic=True)
+
                 # Main Transformers (Talker and Code Predictor)
                 if hasattr(model.model, "talker") and model.model.talker:
                     if LOAD_IN_4BIT:
-                        print("⚠️ Skipping talker compilation in 4-bit mode (unstable).")
+                        print("⚠️  Skipping talker compilation in 4-bit mode (unstable).")
                     else:
-                        print("🚀 Compiling talker and code_predictor...")
-                        # Use default mode to avoid CUDA Graph issues with dynamic shapes
+                        model_status["status"] = "compiling"
+                        model_status["message"] = "Optimizing neural graphs (torch.compile)..."
+                        model_status["progress"] = 30
+                        print("   → Registering talker for compilation...")
                         if hasattr(model.model.talker, "model"):
-                            model.model.talker.model = torch.compile(model.model.talker.model)
-                        
+                            # dynamic=True is CRITICAL for autoregressive models to avoid re-compiling every step
+                            model.model.talker.model = torch.compile(model.model.talker.model, dynamic=True)
+
+                        print("   → Registering code_predictor for compilation...")
                         if hasattr(model.model.talker, "code_predictor") and hasattr(model.model.talker.code_predictor, "model"):
-                            model.model.talker.code_predictor.model = torch.compile(model.model.talker.code_predictor.model)
-                
-                print("✨ Compilation successful")
+                            model.model.talker.code_predictor.model = torch.compile(model.model.talker.code_predictor.model, dynamic=True)
+
+                model_status["progress"] = 60
+                print("✅ Sub-models registered (actual compilation triggers on first forward pass during warmup)")
             except Exception as e:
-                print(f"⚠️ Compilation failed: {e}")
+                model_status["last_error"] = str(e)
+                print(f"⚠️  Compilation setup failed: {e}")
 
         if "CustomVoice" in model_path:
             model_type = "CustomVoice"
@@ -247,19 +294,58 @@ def load_model(model_path: str):
         else:
             model_type = "CustomVoice"
 
-        if torch.cuda.is_available() and model_type == "CustomVoice":
+        if torch.cuda.is_available():
             try:
-                print("🔥 Running warmup generation...")
+                model_status["status"] = "warming_up"
+                model_status["progress"] = 80
+                if USE_COMPILE and not _COMPILE_CACHE_IS_WARM:
+                    model_status["message"] = "First-time warmup: compiling GPU kernels (1-3 min)..."
+                    print("🔥 Warmup — first-time kernel compilation in progress (this is the slow part)...")
+                    print("   Coffee time ☕  Compiled artifacts will be cached for all future restarts.")
+                else:
+                    model_status["message"] = "Warmup: loading compiled kernels from cache..."
+                    print("🔥 Warmup — loading compiled kernels from cache...")
+                
+                _warmup_start = time.time()
+                # Warmup with a small batch (2 sentences) to trigger batched kernels
+                warmup_text = ["Warmup sentence one.", "Warmup sentence two."]
+                
                 with torch.inference_mode():
-                    _ = model.generate_custom_voice(
-                        text="Warmup generation for compilation.", language="English", speaker="Ryan", max_new_tokens=50, use_cache=True
-                    )
-                print("✅ Warmup complete")
+                    if model_type == "CustomVoice":
+                        _ = model.generate_custom_voice(
+                            text=warmup_text, language="English", speaker="Ryan", max_new_tokens=20, use_cache=True
+                        )
+                    elif model_type == "VoiceDesign":
+                        _ = model.generate_voice_design(
+                            text=warmup_text, language="English", instruct="Warmup", max_new_tokens=20, use_cache=True
+                        )
+                    elif model_type == "Base":
+                        # We need a dummy reference for Base warmup
+                        # For now, just warmup the sub-models directly if we don't have a file
+                        # but usually Base models are loaded with a default voice too? 
+                        # Actually, let's just use generate_custom_voice if it exists, 
+                        # as it warms up the talker anyway.
+                        if hasattr(model, "generate_custom_voice"):
+                            _ = model.generate_custom_voice(
+                                text=warmup_text, language="English", speaker="Ryan", max_new_tokens=20, use_cache=True
+                            )
+                
+                _warmup_elapsed = time.time() - _warmup_start
+                print(f"✅ Warmup complete in {_warmup_elapsed:.1f}s")
+                model_status["progress"] = 100
             except Exception as e:
-                print(f"⚠️ Warmup failed (non-critical): {e}")
+                model_status["last_error"] = str(e)
+                print(f"⚠️  Warmup failed (non-critical): {e}")
 
-        print(f"Model loaded: {model_name} (Type: {model_type})")
+        model_status["status"] = "ready"
+        model_status["message"] = "Model ready"
+        model_status["progress"] = 100
+        model_status["elapsed"] = time.time() - model_status["start_time"]
+        print(f"Model loaded: {model_name} (Type: {model_type}) in {model_status['elapsed']:.2f}s")
     except Exception as e:
+        model_status["status"] = "error"
+        model_status["message"] = f"Error: {str(e)}"
+        model_status["last_error"] = str(e)
         print(f"CRITICAL: Failed to load model: {e}")
         if model is not None:
             del model
@@ -269,6 +355,8 @@ def load_model(model_path: str):
             torch.cuda.empty_cache()
             torch.cuda.synchronize()
         raise
+    finally:
+        model_load_lock.release()
 
 
 # ── Pydantic schemas ──────────────────────────────────────────────────────────
@@ -507,6 +595,19 @@ async def get_models(user: str = Depends(get_current_user)):
     return {"models": AVAILABLE_MODELS, "current": model_name, "type": model_type}
 
 
+@app.get("/api/model_status")
+async def get_model_status(user: str = Depends(get_current_user)):
+    # Calculate elapsed if still running
+    current_elapsed = model_status["elapsed"]
+    if model_status["status"] in ["loading", "compiling", "warming_up"] and model_status["start_time"]:
+        current_elapsed = time.time() - model_status["start_time"]
+    
+    return {
+        **model_status,
+        "elapsed": current_elapsed
+    }
+
+
 @app.post("/api/switch_model")
 async def switch_model(data: SwitchModelRequest, user: str = Depends(get_current_user)):
     if not data.model:
@@ -514,9 +615,9 @@ async def switch_model(data: SwitchModelRequest, user: str = Depends(get_current
     if data.model not in AVAILABLE_MODELS:
         raise HTTPException(status_code=400, detail=f"Model {data.model} not found")
     try:
-        load_model(data.model)
-        return {"success": True, "model": model_name, "type": model_type,
-                "message": f"Successfully switched to {model_type} model"}
+        # Run in background thread to avoid blocking the API
+        threading.Thread(target=load_model, args=(data.model,), daemon=True).start()
+        return {"success": True, "message": f"Switching to {data.model} in background..."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

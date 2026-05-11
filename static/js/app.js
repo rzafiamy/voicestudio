@@ -20,6 +20,7 @@ let synthesisTimerInterval = null;
 let synthesisStartTime = 0;
 let wavesurfer = null;         // Wavesurfer instance
 let currentViewItem = null;    // Track currently viewed history item
+let modelStatusInterval = null;
 
 /**
  * Stop all active audio playback
@@ -116,6 +117,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     window.addEventListener('popstate', handleRouting);
     
+    // Start model status polling
+    checkModelStatus();
+
     // Initial VRAM check and set interval
     updateVRAMStatus();
     updateStorageStatus();
@@ -596,8 +600,6 @@ async function handleModelSwitch(e) {
     const newModel = e.target.value;
     if (!newModel) return;
 
-    showLoading();
-    
     // Update UI immediately
     const modelValue = document.getElementById('modelValue');
     const info = getFriendlyModelInfo(newModel);
@@ -619,26 +621,94 @@ async function handleModelSwitch(e) {
             throw new Error(error.detail || error.error || 'Failed to switch model');
         }
 
-        const result = await response.json();
-        modelType = result.type;
-        
-        // Update display name in header badge if it exists
-        const display = document.getElementById('currentModelDisplay');
-        if (display) display.textContent = info.name;
-        
-        updateUIForModelType();
-        updateWorkbenchVisibility();
-        updateVRAMStatus(); // Update VRAM immediately after switch
-        hideLoading();
-        showSuccess(`Active Model: ${info.name}`);
+        // After successful switch trigger, start polling for status
+        checkModelStatus();
 
     } catch (error) {
         console.error('Error switching model:', error);
-        hideLoading();
         showError(error.message);
         // Revert UI on error
         loadModels(); 
     }
+}
+
+/**
+ * Poll model status until ready
+ */
+async function checkModelStatus() {
+    if (modelStatusInterval) clearInterval(modelStatusInterval);
+    
+    const overlay = document.getElementById('modelLoadingState');
+    const title = document.getElementById('modelLoadingTitle');
+    const message = document.getElementById('modelLoadingMessage');
+    const progressFill = document.getElementById('modelLoadingProgress');
+    const timeDisplay = document.getElementById('modelLoadingTime');
+    const stepDisplay = document.getElementById('modelLoadingStep');
+    const percentDisplay = document.getElementById('modelLoadingPercent');
+
+    const updateUI = (data) => {
+        if (data.status === 'ready') {
+            overlay.style.display = 'none';
+            if (modelStatusInterval) {
+                clearInterval(modelStatusInterval);
+                modelStatusInterval = null;
+            }
+            loadModels(); // Refresh models to get the current one
+            return true;
+        }
+
+        overlay.style.display = 'flex';
+        
+        // Map status to friendly titles
+        const statusMap = {
+            'loading': 'Loading Weights',
+            'compiling': 'Optimizing Graph',
+            'warming_up': 'Engine Warmup',
+            'error': 'Loading Failed'
+        };
+
+        title.textContent = statusMap[data.status] || 'Initialising';
+        message.textContent = data.message;
+        progressFill.style.width = `${data.progress}%`;
+        timeDisplay.textContent = `${data.elapsed.toFixed(1)}s`;
+        percentDisplay.textContent = `${Math.round(data.progress)}%`;
+
+        if (data.status === 'loading') stepDisplay.textContent = 'Step 1/3: Loading weights';
+        else if (data.status === 'compiling') stepDisplay.textContent = 'Step 2/3: Neural graph optimization';
+        else if (data.status === 'warming_up') stepDisplay.textContent = 'Step 3/3: First-run GPU warmup';
+        
+        if (data.status === 'error') {
+            title.style.color = '#ef4444';
+            message.style.color = '#ef4444';
+            if (modelStatusInterval) {
+                clearInterval(modelStatusInterval);
+                modelStatusInterval = null;
+            }
+        }
+        return false;
+    };
+
+    // First check
+    try {
+        const res = await apiFetch(`${API_BASE}/api/model_status`);
+        if (res) {
+            const data = await res.json();
+            if (updateUI(data)) return;
+        }
+    } catch (e) {
+        console.error("Failed to check model status", e);
+    }
+
+    modelStatusInterval = setInterval(async () => {
+        try {
+            const res = await apiFetch(`${API_BASE}/api/model_status`);
+            if (!res) return;
+            const data = await res.json();
+            updateUI(data);
+        } catch (e) {
+            console.error("Error in model status poll:", e);
+        }
+    }, 1000);
 }
 
 // Update voice description

@@ -306,6 +306,27 @@
             <div id="errorMessage" class="toast-container"></div>
         </section>
 
+        <!-- Model Loading Overlay -->
+        <section id="modelLoadingState" class="model-loading-overlay" style="display: none;">
+            <div class="model-loader-card">
+                <div class="loader-header">
+                    <div class="loader-title">
+                        <i data-lucide="cpu" class="animate-pulse"></i>
+                        <h2 id="modelLoadingTitle">Initialising Model</h2>
+                    </div>
+                    <div id="modelLoadingTime" class="loader-timer">0.0s</div>
+                </div>
+                <p id="modelLoadingMessage" class="loader-message">Preparing neural engine...</p>
+                <div class="loader-progress-container">
+                    <div id="modelLoadingProgress" class="loader-progress-fill" style="width: 0%"></div>
+                </div>
+                <div class="loader-footer">
+                    <span id="modelLoadingStep">Step 1/3: Loading weights</span>
+                    <span id="modelLoadingPercent">0%</span>
+                </div>
+            </div>
+        </section>
+
         <!-- Empty State View -->
         <section id="emptyState" class="empty-workbench-state">
             <div class="empty-content">

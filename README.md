@@ -84,6 +84,31 @@ The studio auto-detects any directory matching `Qwen3-TTS-*`.
 
 ---
 
+## ⚡ Performance & Optimization
+
+Makix Studio uses **PyTorch 2.0+ Graph Compilation** (`torch.compile`) to achieve up to 3x faster inference speeds. This comes with a specific behavior you should be aware of:
+
+### 1. The "First-Run" Warmup
+When you load a model for the very first time (or after a major update), the application will enter an **Engine Warmup** phase. 
+- **Duration**: 1 to 3 minutes.
+- **What's happening?**: The system is analyzing the neural network and compiling optimized CUDA kernels specifically for your GPU architecture.
+- **UI Feedback**: You will see a "Warming up engine..." progress overlay in the studio. **Do not close the application during this time.**
+
+### 2. Persistent Cache
+Once compilation is complete, the optimized kernels are stored in the `.torch_compile_cache` directory. 
+- **Subsequent Restarts**: Will be nearly instantaneous.
+- **First Audio Generation**: Will be as fast as the model allows, as the "heavy lifting" is already cached.
+
+### 3. Tips for the Best Experience
+- **Wait for "Ready"**: Always wait for the status indicator in the top-left to turn green before starting a large production.
+- **Keep the Cache**: Do not delete the `.torch_compile_cache` folder unless you are troubleshooting or have changed your GPU.
+- **Low VRAM?**: If you have less than 8GB VRAM, consider setting `LOAD_IN_4BIT=true` in your `.env` file. This disables compilation for the main transformer to save memory while keeping it for smaller sub-models.
+
+> [!TIP]
+> If you prefer instant startup and don't mind slower generation speeds, you can disable compilation entirely by setting `USE_COMPILE=false` in your `.env` file.
+
+---
+
 ## Launch
 
 ```bash
