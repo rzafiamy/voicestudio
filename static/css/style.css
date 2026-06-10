@@ -1636,3 +1636,74 @@ body.dark-theme .loading-overlay {
         padding: 0 0.5rem;
     }
 }
+
+/* Custom Profile Button Hover and Active Styles */
+.profile-btn:hover {
+    background-color: rgba(255, 255, 255, 0.25) !important;
+    border-color: rgba(255, 255, 255, 0.35) !important;
+}
+.profile-btn:active {
+    background-color: rgba(255, 255, 255, 0.35) !important;
+}
+
+/* Header Global Actions Button Styles */
+.header-global-actions button:hover {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Custom Toggle Switch for Settings */
+.switch-container {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+    flex-shrink: 0;
+}
+.switch-container input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.switch-container .slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: var(--border-hover);
+    border-radius: 20px;
+    transition: 0.3s;
+}
+.switch-container input:checked + .slider {
+    background-color: var(--accent-primary);
+}
+.switch-container .slider::before {
+    content: "";
+    position: absolute;
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+    background-color: #ffffff;
+    border-radius: 50%;
+    transition: 0.3s;
+}
+.switch-container input:checked + .slider::before {
+    transform: translateX(20px);
+}
+
+/* Dropdown Header styling */
+.dropdown-header {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-main);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.profile-name {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-main);
+}
+.profile-email {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+}

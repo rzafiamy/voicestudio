@@ -340,6 +340,12 @@ function setupEventListeners() {
         if (viewActionsMenu && viewActionsMenu.classList.contains('show')) {
             viewActionsMenu.classList.remove('show');
         }
+
+        // Close profile dropdown menu if clicked outside
+        const profileDropdownMenu = document.getElementById('profileDropdownMenu');
+        if (profileDropdownMenu && profileDropdownMenu.classList.contains('show')) {
+            profileDropdownMenu.classList.remove('show');
+        }
     };
 
     // View Actions Dropdown Trigger
@@ -410,6 +416,124 @@ function setupEventListeners() {
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.onclick = async () => {
+            await fetch('/logout', { method: 'POST' });
+            window.location.href = '/login';
+        };
+    }
+
+    // Profile Dropdown Toggle
+    const profileDropdownBtn = document.getElementById('profileDropdownBtn');
+    if (profileDropdownBtn) {
+        profileDropdownBtn.onclick = (e) => {
+            e.stopPropagation();
+            const menu = document.getElementById('profileDropdownMenu');
+            if (menu) menu.classList.toggle('show');
+            toggleDropdown('speakerOptions', false);
+            toggleDropdown('modelOptions', false);
+        };
+    }
+
+    // Profile Details Modal
+    const profileDetailsBtn = document.getElementById('profileDetailsBtn');
+    if (profileDetailsBtn) {
+        profileDetailsBtn.onclick = async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch('/api/profile');
+                if (response.ok) {
+                    const data = await response.json();
+                    const usernameEl = document.getElementById('profileModalUsername');
+                    const emailEl = document.getElementById('profileModalEmail');
+                    const nameEl = document.getElementById('profileModalName');
+                    if (usernameEl) usernameEl.textContent = data.username;
+                    if (emailEl) emailEl.textContent = data.email;
+                    if (nameEl) nameEl.textContent = data.username.charAt(0).toUpperCase() + data.username.slice(1);
+                    
+                    const initials = data.username.substring(0, 2).toUpperCase();
+                    if (profileDropdownBtn) profileDropdownBtn.textContent = initials;
+                    const initialsModal = document.querySelector('#profileModal .modal-body div div');
+                    if (initialsModal) initialsModal.textContent = initials;
+                }
+            } catch (err) {
+                console.error("Failed to fetch profile info", err);
+            }
+            showModal('profileModal');
+        };
+    }
+    const profileModalClose = document.getElementById('profileModalClose');
+    if (profileModalClose) {
+        profileModalClose.onclick = () => hideModal('profileModal');
+    }
+
+    // Settings Modal
+    const appSettingsBtn = document.getElementById('appSettingsBtn');
+    if (appSettingsBtn) {
+        appSettingsBtn.onclick = (e) => {
+            e.preventDefault();
+            const currentLang = document.getElementById('language').value || 'Auto';
+            document.getElementById('settingsDefaultLang').value = localStorage.getItem('defaultLanguage') || currentLang;
+            document.getElementById('settingsSidebarCollapse').checked = localStorage.getItem('sidebarCollapsed') === 'true';
+            document.getElementById('settingsDarkMode').checked = document.body.classList.contains('dark-theme');
+            showModal('settingsModal');
+        };
+    }
+    const settingsModalCancel = document.getElementById('settingsModalCancel');
+    if (settingsModalCancel) {
+        settingsModalCancel.onclick = () => hideModal('settingsModal');
+    }
+    const settingsModalSave = document.getElementById('settingsModalSave');
+    if (settingsModalSave) {
+        settingsModalSave.onclick = () => {
+            const defaultLang = document.getElementById('settingsDefaultLang').value;
+            const sidebarCollapse = document.getElementById('settingsSidebarCollapse').checked;
+            const darkMode = document.getElementById('settingsDarkMode').checked;
+
+            localStorage.setItem('defaultLanguage', defaultLang);
+            localStorage.setItem('sidebarCollapsed', sidebarCollapse);
+            localStorage.setItem('theme', darkMode ? 'dark' : 'light');
+
+            const languageSelect = document.getElementById('language');
+            if (languageSelect) languageSelect.value = defaultLang;
+            
+            if (sidebarCollapse) {
+                document.body.classList.add('sidebar-collapsed');
+            } else {
+                document.body.classList.remove('sidebar-collapsed');
+            }
+
+            const currentThemeIsDark = document.body.classList.contains('dark-theme');
+            if (darkMode !== currentThemeIsDark) {
+                document.body.classList.toggle('dark-theme', darkMode);
+                const themeIcon = document.getElementById('themeIcon');
+                if (themeIcon) {
+                    themeIcon.setAttribute('data-lucide', darkMode ? 'moon' : 'sun');
+                    if (window.lucide) lucide.createIcons();
+                }
+                window.dispatchEvent(new CustomEvent('themechanged', { detail: { isDark: darkMode } }));
+            }
+
+            hideModal('settingsModal');
+            showSuccess('Settings saved successfully');
+        };
+    }
+
+    // About Modal
+    const aboutAppBtn = document.getElementById('aboutAppBtn');
+    if (aboutAppBtn) {
+        aboutAppBtn.onclick = (e) => {
+            e.preventDefault();
+            showModal('aboutModal');
+        };
+    }
+    const aboutModalClose = document.getElementById('aboutModalClose');
+    if (aboutModalClose) {
+        aboutModalClose.onclick = () => hideModal('aboutModal');
+    }
+
+    // Profile Logout
+    const profileLogoutBtn = document.getElementById('profileLogoutBtn');
+    if (profileLogoutBtn) {
+        profileLogoutBtn.onclick = async () => {
             await fetch('/logout', { method: 'POST' });
             window.location.href = '/login';
         };
@@ -583,8 +707,9 @@ async function loadLanguages() {
             languageSelect.appendChild(option);
         });
 
-        // Set Auto as default
-        languageSelect.value = 'Auto';
+        // Set default language from localStorage
+        const savedLang = localStorage.getItem('defaultLanguage') || 'Auto';
+        languageSelect.value = savedLang;
     } catch (error) {
         console.error('Error loading languages:', error);
         showError('Failed to load languages');
@@ -1062,7 +1187,8 @@ function initWavesurfer(audioUrl) {
         responsive: true,
         height: 40,
         normalize: true,
-        url: audioUrl
+        url: audioUrl,
+        backend: 'MediaElement'
     });
 
     const playBtn = document.getElementById('playPauseBtn');
@@ -1183,9 +1309,11 @@ function showHome(updateUrl = true) {
     if (emptyState) emptyState.style.display = 'none';
     if (catalogSection) catalogSection.style.display = 'flex';
 
-    // Hide technical monitors on Home
+    // Show top bar on Home, but hide produce button
     const topBar = document.querySelector('.top-bar');
-    if (topBar) topBar.style.display = 'none';
+    if (topBar) topBar.style.display = 'flex';
+    const studioActionArea = document.getElementById('studioActionArea');
+    if (studioActionArea) studioActionArea.style.display = 'none';
 
     document.body.classList.add('on-home');
 
@@ -1379,7 +1507,8 @@ function showAudioPlayer(result) {
         height: 44,
         normalize: true,
         url: audioUrl,
-        plugins: plugins
+        plugins: plugins,
+        backend: 'MediaElement'
     });
 
     const playBtn = document.getElementById('floatingPlayPauseBtn');

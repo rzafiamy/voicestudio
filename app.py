@@ -146,6 +146,10 @@ async def help_page(request: Request, user: str = Depends(get_current_user)):
     return templates.TemplateResponse(request, "help.html")
 
 # ── API routes ────────────────────────────────────────────────────────────────
+@app.get("/api/profile")
+async def get_profile(user: str = Depends(get_current_user)):
+    return {"username": user, "role": "Administrator", "email": f"{user}@makix.studio"}
+
 @app.get("/api/vram")
 async def get_vram_status(user: str = Depends(get_current_user)):
     vram = engine.get_vram_status()
