@@ -999,8 +999,13 @@ textarea#text::placeholder {
     color: var(--text-main);
 }
 
+/* Hidden Native Select */
+.hidden-select {
+    display: none !important;
+}
+
 /* Empty Workbench State */
-.empty-workbench-state, .empty-catalog-state {
+.empty-workbench-state {
     flex: 1;
     display: flex;
     align-items: center;
@@ -1008,6 +1013,41 @@ textarea#text::placeholder {
     padding: 3rem;
     text-align: center;
 }
+
+/* Empty History State in Sidebar */
+.empty-history {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem 1rem;
+    text-align: center;
+    color: var(--text-dim);
+    gap: 0.75rem;
+    opacity: 0.7;
+}
+.empty-history i, .empty-history svg {
+    width: 24px;
+    height: 24px;
+    color: var(--text-dim);
+}
+.empty-history span {
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+/* Empty Catalog State */
+.empty-catalog-state {
+    grid-column: 1 / -1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    text-align: center;
+}
+
 .empty-content {
     max-width: 400px;
     display: flex;
@@ -1423,7 +1463,7 @@ body.dark-theme .model-loading-overlay {
 .loading-overlay {
     position: absolute;
     inset: 0;
-    background-color: rgba(255, 255, 255, 0.9);
+    background-color: var(--bg-card);
     display: none;
     flex-direction: column;
     align-items: center;
@@ -1431,7 +1471,7 @@ body.dark-theme .model-loading-overlay {
     z-index: 50;
 }
 body.dark-theme .loading-overlay {
-    background-color: rgba(41, 41, 41, 0.9);
+    background-color: var(--bg-card);
 }
 .spinner-container {
     position: relative;

@@ -1451,7 +1451,13 @@ function renderHistory(data) {
     const historyList = document.getElementById('historyList');
 
     if (data.length === 0) {
-        historyList.innerHTML = '<p class="empty-state">No productions yet</p>';
+        historyList.innerHTML = `
+            <div class="empty-history">
+                <i data-lucide="folder-open"></i>
+                <span>No productions yet</span>
+            </div>
+        `;
+        if (window.lucide) lucide.createIcons();
         return;
     }
 
