@@ -2,11 +2,12 @@
 # Base image ships torch 2.5.1 + CUDA 12.4 + Python 3.11, matching requirements.txt.
 FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
 
-# ffmpeg: podcast video export · libsndfile1: soundfile backend
+# ffmpeg: podcast video export · libsndfile1: soundfile backend · sox: torchaudio/qwen_tts probe it at import
 # build-essential: torch.compile (inductor) compiles kernels at runtime and needs a host C compiler
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ffmpeg \
         libsndfile1 \
+        sox \
         build-essential \
     && rm -rf /var/lib/apt/lists/*
 
