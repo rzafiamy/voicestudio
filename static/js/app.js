@@ -11,6 +11,17 @@ async function apiFetch(url, options = {}) {
     return res;
 }
 
+// Extract an error message from a failed response. Proxies (nginx) can return
+// HTML error pages (502/504), so the body isn't guaranteed to be JSON.
+async function apiErrorMessage(response, fallback) {
+    let message = `${fallback} (HTTP ${response.status})`;
+    try {
+        const error = await response.json();
+        message = error.detail || error.error || message;
+    } catch (_) { /* non-JSON body, keep status-based message */ }
+    return message;
+}
+
 // Global state
 let voices = {};
 let currentAudio = null;
@@ -713,8 +724,7 @@ async function handleModelSwitch(e) {
         });
 
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || error.error || 'Failed to switch model');
+            throw new Error(await apiErrorMessage(response, 'Failed to switch model'));
         }
 
         // After successful switch trigger, start polling for status
@@ -861,8 +871,7 @@ async function handleGenerate(e) {
         });
 
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || error.error || 'Generation failed');
+            throw new Error(await apiErrorMessage(response, 'Generation failed'));
         }
 
         const result = await response.json();
@@ -1015,11 +1024,12 @@ function initWavesurfer(audioUrl) {
         wavesurfer.destroy();
     }
 
+    const colors = getThemeWaveColors();
     wavesurfer = WaveSurfer.create({
         container: '#waveform',
-        waveColor: '#4f46e5',
-        progressColor: '#8b5cf6',
-        cursorColor: '#8b5cf6',
+        waveColor: colors.waveColor,
+        progressColor: colors.progressColor,
+        cursorColor: colors.cursorColor,
         barWidth: 2,
         barRadius: 3,
         responsive: true,
@@ -1194,8 +1204,7 @@ async function performDelete(timestamp) {
                 showHome();
             }
         } else {
-            const err = await response.json();
-            throw new Error(err.detail || 'Failed to delete');
+            throw new Error(await apiErrorMessage(response, 'Failed to delete'));
         }
     } catch (error) {
         console.error('Error deleting item:', error);
@@ -1330,12 +1339,13 @@ function showAudioPlayer(result) {
 
     const plugins = [];
 
+    const colors = getThemeWaveColors();
     floatingWavesurfer = WaveSurfer.create({
         container: '#floatingWaveform',
         backgroundColor: 'transparent',
-        waveColor: '#4f46e5',
-        progressColor: '#8b5cf6',
-        cursorColor: '#8b5cf6',
+        waveColor: colors.waveColor,
+        progressColor: colors.progressColor,
+        cursorColor: colors.cursorColor,
         barWidth: 2,
         barGap: 2,
         barRadius: 3,
@@ -1635,4 +1645,39 @@ function performReset() {
     
     showSuccess('New session started');
 }
+
+function getThemeWaveColors() {
+    const isDark = document.body.classList.contains('dark-theme');
+    if (isDark) {
+        return {
+            waveColor: '#484644',
+            progressColor: '#479ef5',
+            cursorColor: '#479ef5'
+        };
+    } else {
+        return {
+            waveColor: '#edebe9',
+            progressColor: '#0078d4',
+            cursorColor: '#0078d4'
+        };
+    }
+}
+
+window.addEventListener('themechanged', (e) => {
+    const colors = getThemeWaveColors();
+    if (wavesurfer && typeof wavesurfer.setOptions === 'function') {
+        wavesurfer.setOptions({
+            waveColor: colors.waveColor,
+            progressColor: colors.progressColor,
+            cursorColor: colors.cursorColor
+        });
+    }
+    if (floatingWavesurfer && typeof floatingWavesurfer.setOptions === 'function') {
+        floatingWavesurfer.setOptions({
+            waveColor: colors.waveColor,
+            progressColor: colors.progressColor,
+            cursorColor: colors.cursorColor
+        });
+    }
+});
 
