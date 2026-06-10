@@ -622,6 +622,10 @@ async function loadModels() {
                 option.selected = true;
                 opt.classList.add('selected');
                 if (modelValue) modelValue.textContent = info.name;
+                const triggerIcon = document.querySelector('#modelTrigger .trigger-icon');
+                if (triggerIcon) {
+                    triggerIcon.setAttribute('data-lucide', info.icon);
+                }
                 const display = document.getElementById('currentModelDisplay');
                 if (display) display.textContent = info.name;
             }
@@ -711,6 +715,11 @@ async function handleModelSwitch(e) {
     const modelValue = document.getElementById('modelValue');
     const info = getFriendlyModelInfo(newModel);
     if (modelValue) modelValue.textContent = info.name;
+    const triggerIcon = document.querySelector('#modelTrigger .trigger-icon');
+    if (triggerIcon) {
+        triggerIcon.setAttribute('data-lucide', info.icon);
+        if (window.lucide) lucide.createIcons();
+    }
     
     document.querySelectorAll('#modelOptions .custom-select-option').forEach(opt => {
         opt.classList.toggle('selected', opt.dataset.value === newModel);

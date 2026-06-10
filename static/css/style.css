@@ -447,6 +447,10 @@ body.sidebar-collapsed .history-item {
 }
 
 /* Header style selectors */
+#modelSelectContainer {
+    width: 100%;
+    max-width: 280px;
+}
 #modelSelectContainer .custom-select-trigger {
     background-color: rgba(255, 255, 255, 0.15);
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -461,6 +465,11 @@ body.sidebar-collapsed .history-item {
 }
 #modelSelectContainer .custom-select-trigger .trigger-icon {
     color: #ffffff;
+}
+#modelSelectContainer .custom-select-trigger svg.lucide-chevron-down,
+#modelSelectContainer .custom-select-trigger i[data-lucide="chevron-down"] {
+    color: #ffffff !important;
+    opacity: 0.85;
 }
 
 /* Monitors (VRAM and Storage) inside header */
