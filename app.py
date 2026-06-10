@@ -25,7 +25,7 @@ ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin")
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8000"))
-DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "./Qwen3-TTS-12Hz-1.7B-CustomVoice")
+DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "./models/Qwen3-TTS-12Hz-1.7B-CustomVoice")
 
 # ── Auth helpers ─────────────────────────────────────────────────────────────
 HASHED_ADMIN_PASSWORD = bcrypt.hashpw(ADMIN_PASSWORD.encode(), bcrypt.gensalt())

@@ -10,11 +10,13 @@ services:
       - "${PORT:-8000}:${PORT:-8000}"
     volumes:
       # Model weights — download once on the host, see README
-      - ./models:/app/models
+      - ./models:/app/models:ro
       # Generated audio + metadata library
       - ./storage:/app/storage
       # torch.compile kernel cache — keeps restarts instant after first warmup
       - torch-compile-cache:/app/.torch_compile_cache
+      # Hugging Face cache (used if a model is loaded by hub ID instead of local path)
+      - hf-cache:/app/.hf-cache
     # Requires the NVIDIA Container Toolkit on the host
     deploy:
       resources:
@@ -26,3 +28,4 @@ services:
 
 volumes:
   torch-compile-cache:
+  hf-cache:

@@ -26,16 +26,19 @@ COPY app.py engine.py cli.py ./
 COPY static/ static/
 COPY templates/ templates/
 
-# Run as non-root; writable dirs are volume mount points (see docker-compose.yml)
-RUN useradd --create-home --uid 1001 makix \
-    && mkdir -p /app/storage /app/models /app/.torch_compile_cache \
+# Run as non-root; UID must match the host owner of the bind-mounted
+# ./storage and ./models dirs (override: --build-arg APP_UID=$(id -u))
+ARG APP_UID=1000
+RUN useradd --create-home --uid "${APP_UID}" makix \
+    && mkdir -p /app/storage /app/models /app/.torch_compile_cache /app/.hf-cache \
     && chown -R makix:makix /app
 USER makix
 
 ENV HOST=0.0.0.0 \
     PORT=8000 \
+    MODELS_DIR=/app/models \
     TORCHINDUCTOR_CACHE_DIR=/app/.torch_compile_cache \
-    HF_HOME=/app/.torch_compile_cache/hf
+    HF_HOME=/app/.hf-cache
 
 EXPOSE 8000
 

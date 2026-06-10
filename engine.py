@@ -76,7 +76,7 @@ class StudioEngine:
         self._compile_cache_is_warm = Path(self._compile_cache_dir).exists() and any(Path(self._compile_cache_dir).rglob("*.json"))
 
     def discover_local_models(self):
-        roots = [Path("."), Path("models")]
+        roots = [Path("."), Path(os.getenv("MODELS_DIR", "./models"))]
         local_models = []
         for root in roots:
             if root.exists():
