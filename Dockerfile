@@ -3,9 +3,11 @@
 FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
 
 # ffmpeg: podcast video export · libsndfile1: soundfile backend
+# build-essential: torch.compile (inductor) compiles kernels at runtime and needs a host C compiler
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ffmpeg \
         libsndfile1 \
+        build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

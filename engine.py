@@ -16,6 +16,22 @@ from markdown_it import MarkdownIt
 from transformers import BitsAndBytesConfig
 from qwen_tts import Qwen3TTSModel
 
+# qwen-tts 0.1.1 stores supported_speakers as a dict_keys view, which transformers
+# cannot deepcopy during 4-bit quantization (TypeError: cannot pickle 'dict_keys').
+# Normalize it to a list until a fix lands upstream.
+from qwen_tts.core.models.modeling_qwen3_tts import Qwen3TTSForConditionalGeneration as _Q3TTSGen
+
+_q3tts_orig_init = _Q3TTSGen.__init__
+def _q3tts_patched_init(self, *args, **kwargs):
+    _q3tts_orig_init(self, *args, **kwargs)
+    self.supported_speakers = list(self.supported_speakers)
+_Q3TTSGen.__init__ = _q3tts_patched_init
+
+# If an inductor kernel compilation fails at runtime (e.g. no C compiler on the
+# host), fall back to eager execution instead of failing the generation request.
+import torch._dynamo
+torch._dynamo.config.suppress_errors = True
+
 # --- Constants & Defaults ---
 DEFAULT_GEN_KWARGS = dict(
     max_new_tokens=2048,

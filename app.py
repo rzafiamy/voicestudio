@@ -124,6 +124,7 @@ async def health():
         "status": "ok",
         "model": engine.model_name,
         "model_status": engine.model_status["status"],
+        "last_error": engine.model_status["last_error"],
     }
 
 # ── Exception handler ─────────────────────────────────────────────────────────
