@@ -1381,7 +1381,7 @@ function renderPodcastGrid(data) {
                 <p>Start creating in the studio to see your productions here.</p>
                 <button class="btn-primary" onclick="showStudio()">
                     <i data-lucide="mic"></i>
-                    Open Studio
+                    <span>Studio</span>
                 </button>
             </div>
         `;
