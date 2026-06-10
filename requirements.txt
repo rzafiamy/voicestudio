@@ -1,22 +1,24 @@
-torch
-soundfile
-rich
-transformers
-accelerate
-bitsandbytes
-qwen-tts
-huggingface_hub[cli]
-triton
+# Pinned to the versions validated in the working environment
+# (Python 3.10/3.11, CUDA 12.4)
+torch==2.5.1
+soundfile==0.13.1
+rich==15.0.0
+transformers==4.57.3
+accelerate==1.12.0
+bitsandbytes==0.45.5
+qwen-tts==0.1.1
+huggingface_hub[cli]==0.36.2
+triton==3.1.0
 # FastAPI stack
-fastapi
-uvicorn[standard]
-python-multipart
-jinja2
+fastapi==0.136.1
+uvicorn[standard]==0.46.0
+python-multipart==0.0.28
+jinja2==3.1.6
 # Auth
-python-jose[cryptography]
-bcrypt
+python-jose[cryptography]==3.5.0
+bcrypt==5.0.0
 # Config
-python-dotenv
+python-dotenv==1.2.2
 # Text preprocessing
-beautifulsoup4
-markdown-it-py
+beautifulsoup4==4.14.3
+markdown-it-py==4.2.0

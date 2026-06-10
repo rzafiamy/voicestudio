@@ -117,6 +117,15 @@ async def logout():
     response.delete_cookie("access_token")
     return response
 
+# ── Health check (unauthenticated, used by Docker/load balancers) ────────────
+@app.get("/health")
+async def health():
+    return {
+        "status": "ok",
+        "model": engine.model_name,
+        "model_status": engine.model_status["status"],
+    }
+
 # ── Exception handler ─────────────────────────────────────────────────────────
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):

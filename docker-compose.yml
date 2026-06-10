@@ -1,0 +1,28 @@
+services:
+  makix-tts:
+    build: .
+    image: makix-qwen-tts:latest
+    container_name: makix-qwen-tts
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      # PORT comes from .env (default 8000); the app listens on it inside the container
+      - "${PORT:-8000}:${PORT:-8000}"
+    volumes:
+      # Model weights — download once on the host, see README
+      - ./models:/app/models
+      # Generated audio + metadata library
+      - ./storage:/app/storage
+      # torch.compile kernel cache — keeps restarts instant after first warmup
+      - torch-compile-cache:/app/.torch_compile_cache
+    # Requires the NVIDIA Container Toolkit on the host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  torch-compile-cache:

@@ -167,10 +167,14 @@ def generate_podcast(script_text: str,
             f.write(f"file 'segments/{tf.name}'\n")
 
     output_audio = project_dir / "audio_final.wav"
-    print(f"\n🔗 Concatenating {len(temp_files)} segments → {output_audio.name} …")
+    print(f"\n🔗 Concatenating and Normalizing {len(temp_files)} segments → {output_audio.name} …")
+    
+    # We use a filter_complex to normalize the audio to -14 LUFS (standard for podcasts)
     subprocess.run(
         ["ffmpeg", "-y", "-f", "concat", "-safe", "0",
-         "-i", list_file.name, "-c", "copy", output_audio.name],
+         "-i", list_file.name, 
+         "-af", "loudnorm=I=-14:TP=-1:LRA=11", 
+         output_audio.name],
         cwd=project_dir,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,

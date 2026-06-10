@@ -1,0 +1,32 @@
+# VCS / agent
+.git
+.gitignore
+.agent
+
+# Python
+__pycache__
+*.pyc
+venv
+.venv
+
+# Heavy runtime data — mounted as volumes, never baked into the image
+models
+storage
+podcasts
+.torch_compile_cache
+*.whl
+*.wav
+
+# Secrets & local config
+.env
+
+# Dev artifacts
+scratch
+*.log
+Benchmark.md
+README.md
+LICENSE
+setup.sh
+Dockerfile
+docker-compose.yml
+.dockerignore

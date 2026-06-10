@@ -59,6 +59,8 @@ Every generation creates a new project folder in `podcasts/YYYYMMDD_HHMMSS_Title
 | **Speaker Mapping** | Automatically maps "Host" to Ryan and "Guest" to Vivian. |
 | **Project Isolation** | Each podcast has its own self-contained directory. |
 | **Auto-Concatenate** | Uses `ffmpeg` concat demuxer for zero-loss merging. |
+| **Audio Normalization** | Applies EBU R128 (-14 LUFS) normalization for consistent volume. |
+| **Safety Limit** | Warns if the generated audio exceeds the requested duration threshold. |
 
 ## Linux Toolkit Integration
 The skill relies on the following standard tools:

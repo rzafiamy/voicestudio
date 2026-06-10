@@ -113,10 +113,56 @@ Once compilation is complete, the optimized kernels are stored in the `.torch_co
 
 ```bash
 source venv/bin/activate
-python app.py --model ./Qwen3-TTS-12Hz-1.7B-CustomVoice --port 5000
+python app.py --model ./models/Qwen3-TTS-12Hz-1.7B-CustomVoice --port 5000
 ```
 
 Navigate to `http://localhost:5000`.
+
+---
+
+## 🐳 Docker (recommended for production)
+
+### Prerequisites
+
+- [Docker Engine](https://docs.docker.com/engine/install/) with Compose v2
+- [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) (for GPU access)
+
+### 1. Configure the environment
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and **change at minimum**:
+- `SECRET_KEY` — a long random string (`openssl rand -hex 32`)
+- `ADMIN_USERNAME` / `ADMIN_PASSWORD`
+
+### 2. Download models into `./models/`
+
+```bash
+huggingface-cli download Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice --local-dir ./models/Qwen3-TTS-12Hz-1.7B-CustomVoice
+```
+
+### 3. Build and run
+
+```bash
+docker compose up -d --build
+```
+
+The app is available at `http://localhost:8000` (or the `PORT` set in `.env`).
+First startup compiles CUDA kernels (1–3 min); the compile cache persists in
+a named volume, so restarts are instant. Check status with:
+
+```bash
+docker compose ps          # healthcheck hits /health
+docker compose logs -f
+```
+
+### Notes
+
+- Model weights and the `storage/` library live on the host (bind mounts) — the image stays small and stateless.
+- Flash Attention 2 is baked in from a pre-built wheel matching the base image (torch 2.5.1 / CUDA 12.4 / Python 3.11). Override or skip it with `--build-arg FLASH_ATTN_WHEEL=...` / `--build-arg FLASH_ATTN_WHEEL=`.
+- The container runs as a non-root user and exposes an unauthenticated `/health` endpoint for orchestrators and load balancers.
 
 ---
 
