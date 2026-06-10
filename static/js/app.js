@@ -761,7 +761,8 @@ async function loadModels() {
                 </div>
             `;
 
-            if (model === data.current) {
+            const isCurrent = (model === data.current || model.replace(/^\.\//, '') === data.current.replace(/^\.\//, ''));
+            if (isCurrent) {
                 option.selected = true;
                 opt.classList.add('selected');
                 if (modelValue) modelValue.textContent = info.name;
@@ -853,6 +854,12 @@ function updateUIForModelType() {
 async function handleModelSwitch(e) {
     const newModel = e.target.value;
     if (!newModel) return;
+
+    // Sync native select value
+    const modelSelect = document.getElementById('model');
+    if (modelSelect) {
+        modelSelect.value = newModel;
+    }
 
     // Update UI immediately
     const modelValue = document.getElementById('modelValue');

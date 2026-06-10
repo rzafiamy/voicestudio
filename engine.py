@@ -96,7 +96,7 @@ class StudioEngine:
         local_models = []
         for root in roots:
             if root.exists():
-                local_models.extend([str(p) for p in root.iterdir()
+                local_models.extend([os.path.normpath(str(p)) for p in root.iterdir()
                                     if p.is_dir() and "Qwen3-TTS" in p.name and "storage" not in p.name])
         local_models.sort()
         if not local_models:
@@ -114,6 +114,7 @@ class StudioEngine:
             return
 
         try:
+            model_path = os.path.normpath(model_path)
             self.model_status["status"] = "loading"
             self.model_status["message"] = f"Loading {os.path.basename(model_path)}..."
             self.model_status["start_time"] = time.time()
