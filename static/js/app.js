@@ -65,6 +65,7 @@ function navigateTo(path, pushState = true) {
 }
 
 async function handleRouting() {
+    closeMobileSidebar();
     const path = window.location.pathname;
     
     // 1. History Item View: /history/{timestamp}
@@ -108,6 +109,12 @@ async function handleRouting() {
     // Default fallback
     if (path !== '/help' && path !== '/login') {
         showHome();
+    }
+}
+
+function closeMobileSidebar() {
+    if (window.innerWidth <= 768) {
+        document.body.classList.remove('sidebar-mobile-open');
     }
 }
 
@@ -293,6 +300,17 @@ function setupEventListeners() {
             performReset();
         });
     });
+
+    // Mobile Sidebar Drawer Toggle
+    const waffleBtn = document.querySelector('.waffle-btn');
+    if (waffleBtn) {
+        waffleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (window.innerWidth <= 768) {
+                document.body.classList.toggle('sidebar-mobile-open');
+            }
+        });
+    }
 
     // Custom Select Event Listeners
     const speakerTrigger = document.getElementById('speakerTrigger');

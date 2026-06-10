@@ -1536,26 +1536,103 @@ body.dark-theme .loading-overlay {
 }
 @media (max-width: 768px) {
     body {
-        flex-direction: column;
-        overflow-y: auto;
-        height: auto;
-    }
-    .sidebar {
-        width: 100%;
-        height: auto;
-        border-right: none;
-        border-bottom: 1px solid var(--border-main);
-    }
-    .top-bar {
         position: relative;
     }
-    .floating-player {
+    
+    .sidebar {
+        position: fixed;
+        top: 0;
         left: 0;
+        bottom: 0;
+        width: 280px;
+        height: 100vh;
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
+        z-index: 1100;
+        display: flex !important;
+        border-right: 1px solid var(--border-main);
     }
+    
+    body.sidebar-mobile-open .sidebar {
+        transform: translateX(0);
+    }
+    
+    .sidebar-backdrop {
+        position: fixed;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1050;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease;
+    }
+    
+    body.sidebar-mobile-open .sidebar-backdrop {
+        opacity: 1;
+        pointer-events: auto;
+    }
+    
+    .btn-sidebar-toggle {
+        display: none !important;
+    }
+    
+    .logo-text {
+        display: none;
+    }
+    
+    .header-stats-group {
+        display: none !important;
+    }
+    
+    #modelSelectContainer {
+        max-width: 200px;
+    }
+    
+    .floating-player {
+        left: 0 !important;
+        padding: 0.5rem 1rem;
+    }
+    
+    .player-main-content {
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: stretch;
+    }
+    
+    .player-left-group {
+        min-width: unset;
+        justify-content: space-between;
+        width: 100%;
+    }
+    
+    .player-center-group {
+        width: 100%;
+        margin: 0.25rem 0;
+    }
+    
+    .player-right-group {
+        justify-content: space-between;
+        width: 100%;
+    }
+    
+    .workbench {
+        padding: 1rem 0.75rem;
+    }
+    
     .controls-panel {
         grid-template-columns: 1fr;
     }
+    
     .control-group.full-width {
         grid-column: span 1;
+    }
+}
+
+@media (max-width: 480px) {
+    #modelSelectContainer {
+        max-width: 160px;
+    }
+    .top-bar {
+        padding: 0 0.5rem;
     }
 }
