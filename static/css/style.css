@@ -127,8 +127,133 @@ h6 {
 
 /* Premium Custom Icon Styling & Micro-animations */
 svg.lucide, i svg {
-    stroke-width: 1.75px; /* Clean modern line weights */
+    width: 16px !important;
+    height: 16px !important;
+    stroke-width: 1.5px; /* Clean modern line weights (Fluent 2 standard is 1.5px) */
     transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.2s ease;
+}
+
+/* Specific Icon Size Overrides for Fluent 2 Aesthetics */
+.logo-icon i,
+.logo-icon svg {
+    width: 18px !important;
+    height: 18px !important;
+}
+
+.btn-sidebar-toggle i,
+.btn-sidebar-toggle svg {
+    width: 14px !important;
+    height: 14px !important;
+}
+
+.btn-new-session i,
+.btn-new-session svg {
+    width: 14px !important;
+    height: 14px !important;
+}
+
+.nav-item i,
+.nav-item svg {
+    width: 16px !important;
+    height: 16px !important;
+}
+
+.sidebar-search i,
+.sidebar-search svg {
+    width: 13px !important;
+    height: 13px !important;
+}
+
+.item-app-icon i,
+.item-app-icon svg {
+    width: 14px !important;
+    height: 14px !important;
+}
+
+.control-group label i,
+.control-group label svg {
+    width: 12px !important;
+    height: 12px !important;
+}
+
+.custom-select-trigger i,
+.custom-select-trigger svg {
+    width: 14px !important;
+    height: 14px !important;
+}
+
+.vram-label i,
+.vram-label svg,
+.storage-label i,
+.storage-label svg {
+    width: 12px !important;
+    height: 12px !important;
+}
+
+.toast i,
+.toast svg {
+    width: 16px !important;
+    height: 16px !important;
+}
+
+.btn-play-pause-mini i,
+.btn-play-pause-mini svg {
+    width: 14px !important;
+    height: 14px !important;
+}
+
+.btn-icon-only i,
+.btn-icon-only svg {
+    width: 16px !important;
+    height: 16px !important;
+}
+
+.card-speaker-badge i,
+.card-speaker-badge svg {
+    width: 12px !important;
+    height: 12px !important;
+}
+
+.btn-card-action i,
+.btn-card-action svg {
+    width: 14px !important;
+    height: 14px !important;
+}
+
+.play-circle i,
+.play-circle svg {
+    width: 16px !important;
+    height: 16px !important;
+}
+
+.file-dropzone i,
+.file-dropzone svg {
+    width: 32px !important;
+    height: 32px !important;
+}
+
+.modal-header i,
+.modal-header svg {
+    width: 20px !important;
+    height: 20px !important;
+}
+
+#themeToggleBtn i,
+#themeToggleBtn svg {
+    width: 16px !important;
+    height: 16px !important;
+}
+
+.sidebar-footer svg {
+    width: 14px !important;
+    height: 14px !important;
+}
+
+/* Background hero/technical icons */
+.card-image-area > svg,
+.card-image-area > i svg {
+    width: 48px !important;
+    height: 48px !important;
 }
 
 /* Subtle icon hover transitions for buttons */
@@ -1211,6 +1336,53 @@ textarea#text::placeholder {
     align-items: center;
     justify-content: center;
     color: var(--text-dim);
+}
+
+.card-wave-decoration {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 40%, rgba(0, 120, 212, 0.05) 100%);
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.card-play-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    border-radius: 4px 4px 0 0;
+}
+
+.podcast-card:hover .card-play-overlay {
+    opacity: 1;
+}
+
+.play-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: scale(0.9);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.play-circle svg {
+    color: var(--accent-primary) !important;
+    margin-left: 2px !important; /* Center the play triangle visually */
+}
+
+.podcast-card:hover .play-circle {
+    transform: scale(1.1);
 }
 
 .card-speaker-badge {

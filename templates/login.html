@@ -86,7 +86,7 @@
             justify-content: center;
             color: #ffffff;
         }
-        .logo-box svg { width: 18px; height: 18px; }
+        .logo-box svg { width: 18px !important; height: 18px !important; }
 
         .brand-name {
             font-size: 1.25rem;
@@ -123,15 +123,26 @@
             position: relative;
         }
 
+        /* Global Lucide styling for login page */
+        svg.lucide, i svg {
+            stroke-width: 1.5px;
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.2s ease;
+        }
+
         .input-wrapper svg {
             position: absolute;
             left: 0.75rem;
             top: 50%;
             transform: translateY(-50%);
-            width: 14px;
-            height: 14px;
+            width: 14px !important;
+            height: 14px !important;
             color: var(--text-dim);
             pointer-events: none;
+        }
+
+        .btn-login svg {
+            width: 16px !important;
+            height: 16px !important;
         }
 
         input[type="text"], input[type="password"] {
@@ -197,7 +208,7 @@
         }
 
         .error-msg.show { display: flex; }
-        .error-msg svg { width: 14px; height: 14px; flex-shrink: 0; }
+        .error-msg svg { width: 14px !important; height: 14px !important; flex-shrink: 0; }
     </style>
 </head>
 <body>
